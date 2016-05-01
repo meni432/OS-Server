@@ -3,7 +3,6 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package serverPack;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -20,12 +19,12 @@ public class Server {
      * @param args the command line arguments
      */
     public static void main(String[] args) throws Exception {
-        final int port = 5000;
+        final int PORT = 6000;
         final ReentrantLock lock=new ReentrantLock(true);
-        ServerSocket ss;
+        ServerSocket serverSocket;
         try {
-             ss = new ServerSocket(port);
-             ConnectionManager cm=new ConnectionManager(ss,lock);
+             serverSocket = new ServerSocket(PORT);
+             ConnectionManager cm=new ConnectionManager(serverSocket,lock);
              new Thread(cm).start();
              ThreadPool sThreads=new ThreadPool(5);
              RequestMonitor requestMonitor = new RequestMonitor(cm.getStreamList(), sThreads, lock);
