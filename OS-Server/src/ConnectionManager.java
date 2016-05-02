@@ -17,30 +17,26 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class ConnectionManager implements Runnable {
 // TODO change in the client to ObjectInputStream
-    
+
     private final ReentrantLock lock;
     ServerSocket socketS;
     List<InOutStreams> streamList;
     int currentStream = 0;
 
-    public ConnectionManager(ServerSocket socketS,ReentrantLock lock) {
+    public ConnectionManager(ServerSocket socketS, ReentrantLock lock) {
         this.socketS = socketS;
-        this.streamList=Collections.synchronizedList(new ArrayList<InOutStreams>());
-        this.lock=lock;
+        this.streamList = Collections.synchronizedList(new ArrayList<InOutStreams>());
+        this.lock = lock;
     }
 
     public void run() {
-        /// why do we need lock????
         while (true) {
             try {
                 Socket s = socketS.accept();
                 System.out.println("connection accept");
-              lock.lock();
-                try {
-                    streamList.add(new InOutStreams(s));
-                } finally {
-                    lock.unlock();
-                }
+
+                streamList.add(new InOutStreams(s));
+
             } catch (Exception e) {
                 System.out.println("problem in the seerver connection");
             }
@@ -50,7 +46,5 @@ public class ConnectionManager implements Runnable {
     public List<InOutStreams> getStreamList() {
         return streamList;
     }
-
- 
 
 }
