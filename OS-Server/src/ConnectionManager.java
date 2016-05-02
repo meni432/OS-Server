@@ -29,14 +29,18 @@ public class ConnectionManager implements Runnable {
         this.lock = lock;
     }
 
-    public void run() {
+   public void run() {
+        /// why do we need lock????
         while (true) {
             try {
                 Socket s = socketS.accept();
                 System.out.println("connection accept");
-
-                streamList.add(new InOutStreams(s));
-
+              lock.lock();
+                try {
+                    streamList.add(new InOutStreams(s));
+                } finally {
+                    lock.unlock();
+                }
             } catch (Exception e) {
                 System.out.println("problem in the seerver connection");
             }

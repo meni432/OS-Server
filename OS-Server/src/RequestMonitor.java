@@ -45,7 +45,7 @@ public class RequestMonitor extends Thread {
                             currentStream.getOis().close();
                             currentStream.getOos().close();
                             currentStream.getSocket().close();
-                            System.out.println("is removed:"+streamList.remove(currentStream));
+//                            System.out.println("is removed:"+streamList.remove(currentStream));
                         } catch (IOException ex1) {
                            // streamList.remove(currentStream);
                             System.err.println("catch in request monitor");

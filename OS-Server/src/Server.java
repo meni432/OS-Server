@@ -19,9 +19,12 @@ public class Server {
      * @param args the command line arguments
      */
     public static void main(String[] args) throws Exception {
-        final int PORT = 6000;
+        final int PORT = 5000;
         final ReentrantLock lock=new ReentrantLock(true);
         ServerSocket serverSocket;
+        
+        new Thread(new WriterThread()).start();
+        
         try {
              serverSocket = new ServerSocket(PORT);
              ConnectionManager cm=new ConnectionManager(serverSocket,lock);

@@ -4,6 +4,7 @@
  * and open the template in the editor.
  */
 
+import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -28,7 +29,7 @@ public final class Database {
 
     final static int MAX_CAPACITY = 100;
     final static int OBJECT_SIZE = Integer.BYTES * 3;
-    final static int NOT_FOUNT = -1;
+    final static int NOT_FOUND = -1;
     final static int INITIAL_VALUE = 1;
     final static int L = 100;
 
@@ -63,39 +64,47 @@ public final class Database {
      * @return y value
      * @throws IOException
      */
-    private static int readDBHelper(int x) throws IOException, InterruptedException {
+    private static int readDBHelper(int x) {
 
-        String fileName = getFileName(x);
+        try {
+            String fileName = getFileName(x);
 
-        RandomAccessFile raf = new RandomAccessFile(fileName, "r");
+            RandomAccessFile raf = new RandomAccessFile(fileName, "r");
 
-        int position = getPosition(x);
-        raf.seek(position);
-        int read = raf.readInt();
-        if (read == 0) {
-            if (x == 0) {
-                raf.seek(x + Integer.BYTES);
-                return raf.readInt();
+            int position = getPosition(x);
+            raf.seek(position);
+            int read = raf.readInt();
+            if (read == 0) {
+                if (x == 0) {
+                    raf.seek(x + Integer.BYTES);
+                    return raf.readInt();
+                } else {
+                    raf.close();
+                    return NOT_FOUND;
+                }
             } else {
+                raf.seek(position + Integer.BYTES);
+                int ans = raf.readInt();
                 raf.close();
-                return NOT_FOUNT;
+                return ans;
             }
-        } else {
-            raf.seek(position + Integer.BYTES);
-            int ans = raf.readInt();
-            raf.close();
-            return ans;
+        } catch (FileNotFoundException|EOFException ex) {
+            return NOT_FOUND;
+        } catch (IOException ex) {
+            Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
+            return NOT_FOUND;
         }
     }
 
-    public static int readY(int query) throws IOException, InterruptedException {
-        readWriteLock.lockRead();
+    public static int readY(int query) {
+
         try {
+            readWriteLock.lockRead();
             int ans = readDBHelper(query);
             YandZ temp;
             if ((temp = toWrite.get(query)) != null) {
                 temp.z++;
-            } else if (ans != NOT_FOUNT) {
+            } else if (ans != NOT_FOUND) {
                 temp = new YandZ();
                 temp.y = ans;
                 temp.z = 1;
@@ -107,9 +116,14 @@ public final class Database {
                 toWrite.put(query, temp);
             }
             return ans;
+        
+        } catch (InterruptedException ex) {
+            ex.printStackTrace();
         } finally {
             readWriteLock.unlockRead();
         }
+
+        return NOT_FOUND;
     }
 
     /**
@@ -157,7 +171,6 @@ public final class Database {
      * @param toInc value to amount z ( z = z + toInc )
      * @throws IOException
      */
-
     /**
      * set new value for given x
      *
