@@ -4,7 +4,6 @@
  * and open the template in the editor.
  */
 
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -20,8 +19,11 @@ public final class Database {
     final static int OBJECT_SIZE = Integer.BYTES * 3;
     final static int NOT_FOUNT = -1;
     final static int INITIAL_VALUE = 1;
-    
-    private Database() {}
+
+    static ReadWriteLock readWriteLock = new ReadWriteLock();
+
+    private Database() {
+    }
 
     /**
      * generate file name for DB
@@ -48,29 +50,33 @@ public final class Database {
      * @return y value
      * @throws IOException
      */
-    public static int readY(int x) throws IOException {
-        String fileName = getFileName(x);
+    public static int readY(int x) throws IOException, InterruptedException {
+        readWriteLock.lockRead();
+        try {
+            String fileName = getFileName(x);
 
-        RandomAccessFile raf = new RandomAccessFile(fileName, "r");
+            RandomAccessFile raf = new RandomAccessFile(fileName, "r");
 
-        int position = getPosition(x);
-        raf.seek(position);
-        int read = raf.readInt();
-        if (read == 0) {
-            if (x == 0) {
-                raf.seek(x + Integer.BYTES);
-                return raf.readInt();
+            int position = getPosition(x);
+            raf.seek(position);
+            int read = raf.readInt();
+            if (read == 0) {
+                if (x == 0) {
+                    raf.seek(x + Integer.BYTES);
+                    return raf.readInt();
+                } else {
+                    raf.close();
+                    return NOT_FOUNT;
+                }
             } else {
+                raf.seek(position + Integer.BYTES);
+                int ans = raf.readInt();
                 raf.close();
-                return NOT_FOUNT;
+                return ans;
             }
-        } else {
-            raf.seek(position + Integer.BYTES);
-            int ans=raf.readInt();
-            raf.close();
-            return ans;
+        } finally {
+            readWriteLock.unlockRead();
         }
-
     }
 
     /**
@@ -79,18 +85,24 @@ public final class Database {
      * @param x the request value
      * @param y
      * @throws java.io.IOException
+     * @throws java.lang.InterruptedException
      */
-    public static void writeY(int x, int y) throws IOException {
-        String fileName = getFileName(x);
-        RandomAccessFile raf = new RandomAccessFile(fileName, "rw");
+    public static void writeY(int x, int y) throws IOException, InterruptedException {
+        readWriteLock.lockWrite();
+        try {
+            String fileName = getFileName(x);
+            RandomAccessFile raf = new RandomAccessFile(fileName, "rw");
 
-        int position = getPosition(x);
-        raf.seek(position);
-        raf.writeInt(x);
-        raf.writeInt(y);
-        raf.writeInt(INITIAL_VALUE);
+            int position = getPosition(x);
+            raf.seek(position);
+            raf.writeInt(x);
+            raf.writeInt(y);
+            raf.writeInt(INITIAL_VALUE);
 
-        raf.close();
+            raf.close();
+        } finally {
+            readWriteLock.unlockWrite();
+        }
     }
 
     /**
@@ -103,7 +115,7 @@ public final class Database {
     public static void incZ(int x, int toInc) throws IOException {
         String fileName = getFileName(x);
         RandomAccessFile raf = new RandomAccessFile(fileName, "rw");
-        
+
         int position = getPosition(x);
         raf.seek(position + 2 * Integer.BYTES);
         int read = raf.readInt();
@@ -111,34 +123,34 @@ public final class Database {
         int newVal = read + toInc;
         System.out.println(newVal);
         raf.writeInt(newVal);
-        
+
         raf.close();
     }
 
     /**
-     *set new value for given x
+     * set new value for given x
+     *
      * @param x the request value
      * @param z new value for z in (x,y,z)
      */
     public static void writeZ(int x, int z) throws IOException {
         String fileName = getFileName(x);
         RandomAccessFile raf = new RandomAccessFile(fileName, "rw");
-        
+
         int position = getPosition(x);
         raf.seek(position + Integer.BYTES);
         raf.writeInt(z);
-        
+
         raf.close();
     }
 
     /**
      * only for test
      */
-    public static void main(String[] args) throws IOException {
-        int start=65;
-        for (int i = 0; i < 15; i++) {
+    public static void main(String[] args) throws IOException, InterruptedException {
+        int start = 65;
+        for (int i = 0; i < 100000; i++) {
             writeY(start++, i);
         }
-       
     }
 }

@@ -27,9 +27,10 @@ public class STask implements Runnable {
     public void run() {
         
         try {
-            Thread.sleep(20);
-            ois.getOos().writeObject(query);
-            System.out.println(query+" Sent");
+            Thread.sleep(2000);
+            int ans = Database.readY(query);
+            System.out.println(Thread.currentThread().getName()+" "+ans);
+            ois.getOos().writeObject(ans);
         } catch (IOException ex) {
             try {
                 ois.getOis().close();

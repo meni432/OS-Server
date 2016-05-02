@@ -38,7 +38,6 @@ public class RequestMonitor extends Thread {
                         // TODO blocking read
                         int query = (int)currentStream.getOis().readObject();
                         STask task = new STask(currentStream, query);
-                        System.out.println("send "+query+" to thread pool");
                         threadPool.execute(task);
                         
                     } catch (IOException ex) {
