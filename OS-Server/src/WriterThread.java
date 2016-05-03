@@ -14,20 +14,21 @@ import java.util.logging.Logger;
  */
 public class WriterThread implements Runnable {
 
-    final static int TTS = 1000;
+    final static int TTS = 3000;
 
     @Override
     public void run() {
-        try {
+        
             while (true) {
-                Thread.sleep(TTS);
+                try {
+                    Thread.sleep(TTS);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(WriterThread.class.getName()).log(Level.SEVERE, null, ex);
+                }
                 Database.writeAll();
-                System.out.println("Write all compleated!");
+                System.err.println("-----------------------Write all compleated!------------------------");
             }
-        } catch (InterruptedException ex) {
-        } catch (IOException ex) {
-            Logger.getLogger(WriterThread.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        
     }
 
 }

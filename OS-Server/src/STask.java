@@ -27,7 +27,7 @@ public class STask implements Runnable {
     public void run() {
         
         try {
-            Thread.sleep(2000);
+            Thread.sleep(20);
             int ans = Database.readY(query);
             System.out.println(Thread.currentThread().getName()+" "+ans);
             ois.getOos().writeObject(ans);
@@ -40,6 +40,7 @@ public class STask implements Runnable {
             } catch (IOException ex1) {
                 System.err.println("catch in STask");
             }
+        
         } catch (InterruptedException ex) {
             Logger.getLogger(STask.class.getName()).log(Level.SEVERE, null, ex);
         }

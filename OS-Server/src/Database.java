@@ -33,7 +33,9 @@ public final class Database {
     final static int INITIAL_VALUE = 1;
     final static int L = 100;
 
-    private static ReadWriteLock readWriteLock = new ReadWriteLock();
+    //private static ReadWriteLock readWriteLock = new ReadWriteLock();
+    private static final ReadWriteLock readWriteLock = new ReadWriteLock();
+
     private static HashMap<Integer, YandZ> toWrite = new HashMap<>();
 
     private Database() {
@@ -104,6 +106,7 @@ public final class Database {
             YandZ temp;
             if ((temp = toWrite.get(query)) != null) {
                 temp.z++;
+                ans=temp.y; // ofir added this line because we need the ans from the hashTable(ans=-1 if it's not in the DB) 
             } else if (ans != NOT_FOUND) {
                 temp = new YandZ();
                 temp.y = ans;
@@ -116,14 +119,17 @@ public final class Database {
                 toWrite.put(query, temp);
             }
             return ans;
-        
-        } catch (InterruptedException ex) {
-            ex.printStackTrace();
-        } finally {
+               } 
+        catch (InterruptedException ex) {
+            Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
+        }//        catch (InterruptedException ex) {
+//            ex.printStackTrace();    
+//        } 
+        finally {
             readWriteLock.unlockRead();
         }
 
-        return NOT_FOUND;
+       return NOT_FOUND;
     }
 
     /**
@@ -134,33 +140,49 @@ public final class Database {
      * @throws java.io.IOException
      * @throws java.lang.InterruptedException
      */
-    private static void writeXYZ(int x, int y, int incZ) throws IOException, InterruptedException {
-        String fileName = getFileName(x);
-        RandomAccessFile raf = new RandomAccessFile(fileName, "rw");
-
-        int position = getPosition(x);
-        raf.seek(position);
-        raf.writeInt(x);
-        raf.writeInt(y);
-        int read = raf.readInt();
-        raf.seek(position + 2 * Integer.BYTES);
-        raf.writeInt(read + incZ);
-
-        raf.close();
+    // TODO check change in raf
+    private static void writeXYZ(int x, int y, int incZ)  {
+        RandomAccessFile raf =null;
+        try {
+            String fileName = getFileName(x);
+            raf = new RandomAccessFile(fileName, "rw");
+            
+            int position = getPosition(x);
+            raf.seek(position);
+            raf.writeInt(x);
+            raf.writeInt(y);
+            int read = raf.readInt();// go to catch IOE if it's the first time, than write z=1
+            raf.seek(position + 2 * Integer.BYTES);
+            raf.writeInt(read + incZ);
+            raf.close();
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            try {
+                if(raf!=null)
+                    raf.writeInt(1);
+            } catch (IOException ex1) {
+                Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex1);
+            }
+        }
     }
 
-    public static void writeAll() throws IOException, InterruptedException {
-        readWriteLock.lockWrite();
+    public static void writeAll()  {
         try {
-            Set<Entry<Integer, YandZ>> set = toWrite.entrySet();
-            Iterator<Entry<Integer, YandZ>> itr = set.iterator();
-            while (itr.hasNext()) {
-                Entry<Integer, YandZ> elm = (Entry<Integer, YandZ>) itr.next();
-                writeXYZ(elm.getKey(), elm.getValue().y, elm.getValue().z);
+            readWriteLock.lockWrite();
+            try {
+                Set<Entry<Integer, YandZ>> set = toWrite.entrySet();
+                Iterator<Entry<Integer, YandZ>> itr = set.iterator();
+                while (itr.hasNext()) {
+                    Entry<Integer, YandZ> elm = (Entry<Integer, YandZ>) itr.next();
+                    writeXYZ(elm.getKey(), elm.getValue().y, elm.getValue().z);
+                }
+                toWrite.clear();
+            } finally {
+                readWriteLock.unlockWrite();
             }
-            toWrite.clear();
-        } finally {
-            readWriteLock.unlockWrite();
+        }   catch (InterruptedException ex) {
+            Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
@@ -191,7 +213,19 @@ public final class Database {
     /**
      * only for test
      */
-    public static void main(String[] args) throws IOException, InterruptedException {
-
+    public static void main(String[] args)  {
+        try {
+            // debug DB file
+            String fileName="300.db";
+            RandomAccessFile raf = new RandomAccessFile(fileName, "r");
+            for (int i = 0; i < 100; i++) {
+                System.out.println("x["+i+"]= "+raf.readInt()+" y["+i+"]= "+raf.readInt()+" z["+i+"]= "+raf.readInt());
+            }
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
     }
 }
