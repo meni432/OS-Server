@@ -1,5 +1,4 @@
 
-
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.locks.Condition;
@@ -11,7 +10,6 @@ public class BlockingQueue {
 
     private final ReentrantLock lock = new ReentrantLock(true);
     private final Condition notEmpty = lock.newCondition();
-
     private List queue = new LinkedList();
 
     public void enqueue(Object item) {
@@ -27,14 +25,24 @@ public class BlockingQueue {
     public Object dequeue() throws InterruptedException {
         lock.lock();
         try {
-            while (this.queue.isEmpty()) {               
+            while (this.queue.isEmpty()) {
                 notEmpty.await();
             }
             return this.queue.remove(0);
         } finally {
             lock.unlock();
         }
-        
+
+    }
+
+    public boolean isEmpty() {
+        lock.lock();
+        try {
+            return queue.isEmpty();
+        } finally {
+            lock.unlock();
+
+        }
     }
 
 }

@@ -27,10 +27,10 @@ public class Server {
         
         try {
              serverSocket = new ServerSocket(PORT);
-             ConnectionManager cm=new ConnectionManager(serverSocket,lock);
-             new Thread(cm).start();
-             ThreadPool sThreads=new ThreadPool(5);
-             RequestMonitor requestMonitor = new RequestMonitor(cm.getStreamList(), sThreads, lock);
+             ConnectionManager connectionM=new ConnectionManager(serverSocket,lock);
+             new Thread(connectionM).start();
+             ThreadPool sThreads=new ThreadPool(5);           
+             RequestMonitor requestMonitor = new RequestMonitor(connectionM.getStreamList(), sThreads, lock);
              requestMonitor.start();
         } catch (IOException ex) {
             System.out.println("cannot creats server socket");
