@@ -22,15 +22,17 @@ public class Server {
         final int PORT = 5000;
         final ReentrantLock lock=new ReentrantLock(true);
         ServerSocket serverSocket;
-        
+        CashManager cashM=new CashManager();
+        new Thread(cashM).start();
+        Database dataB=new Database(cashM);
         new Thread(new WriterThread()).start();
         
         try {
              serverSocket = new ServerSocket(PORT);
              ConnectionManager connectionM=new ConnectionManager(serverSocket,lock);
              new Thread(connectionM).start();
-             ThreadPool sThreads=new ThreadPool(5);           
-             RequestMonitor requestMonitor = new RequestMonitor(connectionM.getStreamList(), sThreads, lock);
+             ThreadPool sThreads=new ThreadPool(5);    
+             RequestMonitor requestMonitor = new RequestMonitor(connectionM.getStreamList(), sThreads, lock,cashM);
              requestMonitor.start();
         } catch (IOException ex) {
             System.out.println("cannot creats server socket");

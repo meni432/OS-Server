@@ -6,6 +6,7 @@
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -17,10 +18,14 @@ public class STask implements Runnable {
 
     InOutStreams ois;
     int query;
+    CashManager cashM;
     
-    public STask(InOutStreams ois, int query){
+    
+    
+    public STask(InOutStreams ois, int query,CashManager cashM){
         this.ois = ois;
         this.query = query;
+        this.cashM=cashM;        
     }
     
     @Override
@@ -28,8 +33,16 @@ public class STask implements Runnable {
         
         try {
             Thread.sleep(20);
-            int ans = Database.readY(query);
-            System.out.println(Thread.currentThread().getName()+" "+ans);
+            int ans=cashM.searchCash(query);
+            if(ans!=Database.NOT_FOUND)
+            {
+                System.err.println("----------cash Answer-------------"+Thread.currentThread().getName()+" "+ans);
+                Database.updateFromCash(query, ans, 1);
+            }
+            else{
+            ans = Database.readY(query);
+   //         System.out.println(Thread.currentThread().getName()+" "+ans);          
+            }
             ois.getOos().writeObject(ans);
         } catch (IOException ex) {
             try {

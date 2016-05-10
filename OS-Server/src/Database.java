@@ -21,24 +21,20 @@ import java.util.logging.Logger;
  */
 public final class Database {
 
-    static class YandZ {
-
-        int y;
-        int z;
-    }
+    
 
     final static int MAX_CAPACITY = 100;
     final static int OBJECT_SIZE = Integer.BYTES * 3;
     final static int NOT_FOUND = -1;
     final static int INITIAL_VALUE = 1;
     final static int L = 100;
-
-    //private static ReadWriteLock readWriteLock = new ReadWriteLock();
     private static final ReadWriteLock readWriteLock = new ReadWriteLock();
+    private static CashManager cashM;
 
     private static HashMap<Integer, YandZ> toWrite = new HashMap<>();
 
-    private Database() {
+    public Database(CashManager cashM) {
+        Database.cashM = cashM;
     }
 
     /**
@@ -66,35 +62,52 @@ public final class Database {
      * @return y value
      * @throws IOException
      */
-    private static int readDBHelper(int x) {
-
+    private static YandZ readDBHelper(int x) {
+        RandomAccessFile raf = null;
         try {
             String fileName = getFileName(x);
-
-            RandomAccessFile raf = new RandomAccessFile(fileName, "r");
-
+            raf = new RandomAccessFile(fileName, "r");
             int position = getPosition(x);
             raf.seek(position);
             int read = raf.readInt();
             if (read == 0) {
                 if (x == 0) {
-                    raf.seek(x + Integer.BYTES);
-                    return raf.readInt();
+                    raf.seek(Integer.BYTES);
+                    return new YandZ(raf.readInt(), raf.readInt());
                 } else {
-                    raf.close();
-                    return NOT_FOUND;
+                    return new YandZ(NOT_FOUND, NOT_FOUND);
                 }
             } else {
-                raf.seek(position + Integer.BYTES);
-                int ans = raf.readInt();
-                raf.close();
-                return ans;
+                raf.seek(position + Integer.BYTES);  
+                return new YandZ(raf.readInt(), raf.readInt());
             }
-        } catch (FileNotFoundException|EOFException ex) {
-            return NOT_FOUND;
+        } catch (FileNotFoundException | EOFException ex) {
+            return new YandZ(NOT_FOUND, NOT_FOUND);
         } catch (IOException ex) {
+            ex.printStackTrace();
+            return new YandZ(NOT_FOUND, NOT_FOUND);
+        }
+        finally{
+            if(raf!=null)
+                try {
+                    raf.close();
+            } catch (IOException ex) {
+                Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    }
+
+    public static void updateFromCash(int x, int y, int incZ) {
+        try {
+            readWriteLock.lockRead();
+            YandZ toPut = new YandZ();
+            toPut.y = y;
+            toPut.z = incZ;
+            toWrite.put(x, toPut);
+        } catch (InterruptedException ex) {
             Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
-            return NOT_FOUND;
+        } finally {
+            readWriteLock.unlockRead();
         }
     }
 
@@ -102,11 +115,17 @@ public final class Database {
 
         try {
             readWriteLock.lockRead();
-            int ans = readDBHelper(query);
+            YandZ yAndZ = readDBHelper(query);
+            System.err.println("---------before execute----+ x="+query+" y="+yAndZ.y+" z="+yAndZ.z);
+            if (yAndZ.z > CashManager.minZ) {
+                System.err.println("try execute in database");
+                cashM.execute(query, yAndZ.y, yAndZ.z);
+            }
+            int ans = yAndZ.y;
             YandZ temp;
             if ((temp = toWrite.get(query)) != null) {
                 temp.z++;
-                ans=temp.y; // ofir added this line because we need the ans from the hashTable(ans=-1 if it's not in the DB) 
+                ans = temp.y; // ofir added this line because we need the ans from the hashTable(ans=-1 if it's not in the DB) 
             } else if (ans != NOT_FOUND) {
                 temp = new YandZ();
                 temp.y = ans;
@@ -119,17 +138,16 @@ public final class Database {
                 toWrite.put(query, temp);
             }
             return ans;
-               } 
-        catch (InterruptedException ex) {
+        } catch (InterruptedException ex) {
             Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
         }//        catch (InterruptedException ex) {
-//            ex.printStackTrace();    
-//        } 
+        //            ex.printStackTrace();    
+        //        } 
         finally {
             readWriteLock.unlockRead();
         }
 
-       return NOT_FOUND;
+        return NOT_FOUND;
     }
 
     /**
@@ -141,12 +159,12 @@ public final class Database {
      * @throws java.lang.InterruptedException
      */
     // TODO check change in raf
-    private static void writeXYZ(int x, int y, int incZ)  {
-        RandomAccessFile raf =null;
+    private static void writeXYZ(int x, int y, int incZ) {
+        RandomAccessFile raf = null;
         try {
             String fileName = getFileName(x);
             raf = new RandomAccessFile(fileName, "rw");
-            
+
             int position = getPosition(x);
             raf.seek(position);
             raf.writeInt(x);
@@ -159,15 +177,16 @@ public final class Database {
             Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
             try {
-                if(raf!=null)
+                if (raf != null) {
                     raf.writeInt(1);
+                }
             } catch (IOException ex1) {
                 Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex1);
             }
         }
     }
 
-    public static void writeAll()  {
+    public static void writeAll() {
         try {
             readWriteLock.lockWrite();
             try {
@@ -181,7 +200,7 @@ public final class Database {
             } finally {
                 readWriteLock.unlockWrite();
             }
-        }   catch (InterruptedException ex) {
+        } catch (InterruptedException ex) {
             Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
@@ -209,23 +228,38 @@ public final class Database {
 
         raf.close();
     }
+    static class YandZ {
 
+        int y;
+        int z;
+
+        public YandZ() {
+            this.y = 0;
+            this.z = 0;
+        }
+
+        public YandZ(int y, int z) {
+            this.y = y;
+            this.z = z;
+        }
+
+    }
     /**
      * only for test
      */
-    public static void main(String[] args)  {
+    public static void main(String[] args) {
         try {
             // debug DB file
-            String fileName="300.db";
+            String fileName = "600.db";
             RandomAccessFile raf = new RandomAccessFile(fileName, "r");
             for (int i = 0; i < 100; i++) {
-                System.out.println("x["+i+"]= "+raf.readInt()+" y["+i+"]= "+raf.readInt()+" z["+i+"]= "+raf.readInt());
+                System.out.println("x[" + i + "]= " + raf.readInt() + " y[" + i + "]= " + raf.readInt() + " z[" + i + "]= " + raf.readInt());
             }
         } catch (FileNotFoundException ex) {
             Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
             Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
+
     }
 }

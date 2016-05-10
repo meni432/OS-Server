@@ -20,11 +20,13 @@ public class RequestMonitor extends Thread {
     private List<InOutStreams> streamList;
     private ThreadPool threadPool;
     private ReentrantLock lock;
+    CashManager cashM;
 
-    public RequestMonitor(List<InOutStreams> streamList, ThreadPool threadPool, ReentrantLock lock) {
+    public RequestMonitor(List<InOutStreams> streamList, ThreadPool threadPool, ReentrantLock lock,CashManager cashM) {
         this.streamList = streamList;
         this.threadPool = threadPool;
         this.lock = lock;
+        this.cashM=cashM;
     }
 
     @Override
@@ -37,7 +39,7 @@ public class RequestMonitor extends Thread {
                     try {
                         // TODO blocking read
                         int query = (int)currentStream.getOis().readObject();
-                        STask task = new STask(currentStream, query);
+                        STask task = new STask(currentStream, query,cashM);
                         threadPool.execute(task);
                         
                     } catch (IOException ex) {
