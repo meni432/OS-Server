@@ -7,7 +7,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class ThreadPool {
 
     private BlockingQueue taskQueue = null;
-    private List<PoolThread> threads = new ArrayList<PoolThread>();
+    private List<PoolThread> threads = new ArrayList<>();
     private boolean isStopped = false;
 
     private final ReentrantLock lock = new ReentrantLock(true);

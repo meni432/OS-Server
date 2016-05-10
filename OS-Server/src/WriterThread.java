@@ -1,5 +1,4 @@
 
-import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -15,7 +14,7 @@ import java.util.logging.Logger;
 public class WriterThread implements Runnable {
 
     final static int TTS = 3000;
-
+// shoud be fanction of toWrite size and not time
     @Override
     public void run() {
         

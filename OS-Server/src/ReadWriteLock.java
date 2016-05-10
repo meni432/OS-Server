@@ -13,8 +13,7 @@ import java.util.Map;
  */
 public class ReadWriteLock{
 
-  private Map<Thread, Integer> readingThreads =
-       new HashMap<Thread, Integer>();
+  private Map<Thread, Integer> readingThreads =new HashMap<>();
 
    private int writeAccesses    = 0;
    private int writeRequests    = 0;
@@ -87,7 +86,7 @@ public class ReadWriteLock{
   private int getReadAccessCount(Thread callingThread){
     Integer accessCount = readingThreads.get(callingThread);
     if(accessCount == null) return 0;
-    return accessCount.intValue();
+    return accessCount;
   }
 
 

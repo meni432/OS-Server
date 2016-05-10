@@ -5,7 +5,6 @@
  */
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
@@ -17,10 +16,10 @@ import java.util.logging.Logger;
  */
 public class RequestMonitor extends Thread {
 
-    private List<InOutStreams> streamList;
-    private ThreadPool threadPool;
-    private ReentrantLock lock;
-    CashManager cashM;
+    private final List<InOutStreams> streamList;
+    private final ThreadPool threadPool;
+    private final ReentrantLock lock;
+    private final CashManager cashM;
 
     public RequestMonitor(List<InOutStreams> streamList, ThreadPool threadPool, ReentrantLock lock,CashManager cashM) {
         this.streamList = streamList;

@@ -18,11 +18,7 @@ public class PoolThread extends Thread {
             try {
                 Runnable runnable = (Runnable) taskQueue.dequeue();
                 runnable.run();
-            } catch (InterruptedException e) {
-                //log or otherwise report exception,
-                //but keep pool thread alive.
-              //  e.printStackTrace();
-            }
+            } catch (InterruptedException e) {}
             
         }
     }

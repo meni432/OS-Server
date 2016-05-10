@@ -44,7 +44,7 @@ public class TestThreadPool {
     static int name = 0;
     public static void main(String[] args) {
         ThreadPool pool = new ThreadPool(5);
-        StopPoolTask stopT=new StopPoolTask(pool);
+
         for (int i = 0; i < 1000; i++){
             try {
                 pool.execute(new Task("task "+(++name)));
@@ -54,7 +54,7 @@ public class TestThreadPool {
         }
         
         try {
-            pool.execute(stopT);
+           
         } catch (Exception ex) {
             ex.printStackTrace();
         }
