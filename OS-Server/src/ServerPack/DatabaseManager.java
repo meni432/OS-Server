@@ -1,3 +1,5 @@
+package ServerPack;
+
 /*
  * To change this license header, choose License Headers in Project Properties.
  * To change this template file, choose Tools | Templates
@@ -12,29 +14,28 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.Semaphore;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * @author Meni Samet
  */
-public final class Database {
+public final class DatabaseManager {
 
     
 
-    final static int MAX_CAPACITY = 100;
+    final static int FILE_MAX_CAPACITY = 100;
+    final static int UPDATE_DB_REACHED=1000;
     final static int OBJECT_SIZE = Integer.BYTES * 3;
     final static int NOT_FOUND = -1;
-    final static int INITIAL_VALUE = 1;
-    final static int L = 100;
+    final static int INITIAL_VALUE = 1;    
     private static final ReadWriteLock readWriteLock = new ReadWriteLock();
-    private static CashManager cashM;
+    private static final Semaphore semUpdateDB = new Semaphore(0);
 
     private static HashMap<Integer, YandZ> toWrite = new HashMap<>();
 
-    public Database(CashManager cashM) {
-        Database.cashM = cashM;
-    }
+    private DatabaseManager() {} // SingleTone desgin Pattern
 
     /**
      * generate file name for DB
@@ -43,7 +44,7 @@ public final class Database {
      * @return filename contain the result
      */
     private static String getFileName(int x) {
-        return "" + (x / MAX_CAPACITY) * MAX_CAPACITY + ".db";
+        return "" + (x / FILE_MAX_CAPACITY) * FILE_MAX_CAPACITY + ".db";
     }
 
     /**
@@ -51,7 +52,7 @@ public final class Database {
      * @return position of the first byte
      */
     private static int getPosition(int x) {
-        return (x % (MAX_CAPACITY)) * OBJECT_SIZE;
+        return (x % (FILE_MAX_CAPACITY)) * OBJECT_SIZE;
     }
 
     /**
@@ -91,7 +92,7 @@ public final class Database {
                 try {
                     raf.close();
             } catch (IOException ex) {
-                Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(DatabaseManager.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
     }
@@ -104,7 +105,7 @@ public final class Database {
             toPut.z = incZ;
             toWrite.put(x, toPut);
         } catch (InterruptedException ex) {
-            Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(DatabaseManager.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
             readWriteLock.unlockRead();
         }
@@ -115,10 +116,8 @@ public final class Database {
         try {
             readWriteLock.lockRead();
             YandZ yAndZ = readDBHelper(query);
-            System.err.println("---------before execute----+ x="+query+" y="+yAndZ.y+" z="+yAndZ.z);
             if (yAndZ.z > CashManager.minZ) {
-                System.err.println("try execute in database");
-                cashM.execute(query, yAndZ.y, yAndZ.z);
+                CashManager.addXYZtoCash(query, yAndZ.y, yAndZ.z);
             }
             int ans = yAndZ.y;
             YandZ temp;
@@ -132,16 +131,18 @@ public final class Database {
                 toWrite.put(query, temp);
             } else {
                 temp = new YandZ();
-                ans = temp.y = (int) (Math.random() * L) + 1;
+                ans = temp.y = (int) (Math.random() * Server.RANDOM_RANGE) + 1;
                 temp.z = 1;
                 toWrite.put(query, temp);
             }
+            if(toWrite.size()>=UPDATE_DB_REACHED)
+            {
+                semUpdateDB.release();
+            }
             return ans;
         } catch (InterruptedException ex) {
-            Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
-        }//        catch (InterruptedException ex) {
-        //            ex.printStackTrace();    
-        //        } 
+            Logger.getLogger(DatabaseManager.class.getName()).log(Level.SEVERE, null, ex);
+        }   
         finally {
             readWriteLock.unlockRead();
         }
@@ -173,20 +174,23 @@ public final class Database {
             raf.writeInt(read + incZ);
             raf.close();
         } catch (FileNotFoundException ex) {
-            Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(DatabaseManager.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
             try {
                 if (raf != null) {
                     raf.writeInt(1);
                 }
             } catch (IOException ex1) {
-                Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex1);
+                Logger.getLogger(DatabaseManager.class.getName()).log(Level.SEVERE, null, ex1);
             }
         }
     }
 
     public static void writeAll() {
         try {
+            while(toWrite.size()<UPDATE_DB_REACHED){
+            semUpdateDB.acquire();
+            }
             readWriteLock.lockWrite();
             try {
                 Set<Entry<Integer, YandZ>> set = toWrite.entrySet();
@@ -200,7 +204,7 @@ public final class Database {
                 readWriteLock.unlockWrite();
             }
         } catch (InterruptedException ex) {
-            Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(DatabaseManager.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
@@ -255,9 +259,9 @@ public final class Database {
                 System.out.println("x[" + i + "]= " + raf.readInt() + " y[" + i + "]= " + raf.readInt() + " z[" + i + "]= " + raf.readInt());
             }
         } catch (FileNotFoundException ex) {
-            Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(DatabaseManager.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
-            Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(DatabaseManager.class.getName()).log(Level.SEVERE, null, ex);
         }
 
     }

@@ -3,11 +3,20 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
+package ServerPack;
 
 /**
  *
  * @author ofir Arnon
  */
-public class MySortedLinkedList {
+public class CashWriteThread implements Runnable{
+
+    @Override
+    
+    public void run() {
+        while(true){
+        CashManager.updateCash();
+        }
+    }
     
 }

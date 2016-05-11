@@ -1,3 +1,5 @@
+package ServerPack;
+
 /*
  * To change this license header, choose License Headers in Project Properties.
  * To change this template file, choose Tools | Templates
@@ -17,15 +19,17 @@ import java.util.logging.Logger;
 public class RequestMonitor extends Thread {
 
     private final List<InOutStreams> streamList;
-    private final ThreadPool threadPool;
+    private final ThreadPool seachersThreadPool;
+    private final ThreadPool dBreadersPool;
+    private final ThreadPool cashReadersPool;
     private final ReentrantLock lock;
-    private final CashManager cashM;
 
-    public RequestMonitor(List<InOutStreams> streamList, ThreadPool threadPool, ReentrantLock lock,CashManager cashM) {
+    public RequestMonitor(List<InOutStreams> streamList, ThreadPool seachersThreadPool, ReentrantLock lock,ThreadPool cashReadersPool,ThreadPool dBreadersPool) {
         this.streamList = streamList;
-        this.threadPool = threadPool;
+        this.seachersThreadPool = seachersThreadPool;
+        this.cashReadersPool=cashReadersPool;
+        this.dBreadersPool=dBreadersPool;
         this.lock = lock;
-        this.cashM=cashM;
     }
 
     @Override
@@ -38,8 +42,8 @@ public class RequestMonitor extends Thread {
                     try {
                         // TODO blocking read
                         int query = (int)currentStream.getOis().readObject();
-                        STask task = new STask(currentStream, query,cashM);
-                        threadPool.execute(task);
+                        SearchThread task = new SearchThread(currentStream, query,cashReadersPool,dBreadersPool);
+                        seachersThreadPool.execute(task);
                         
                     } catch (IOException ex) {
                         try {
