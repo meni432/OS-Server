@@ -22,16 +22,39 @@ import java.util.logging.Logger;
  */
 public class CashManager implements Runnable {
 
-    // lock Mechanizem ????
+    static class XYZ {
 
+        int x;
+        int y;
+        int z;
+
+        public XYZ(int x, int y, int z) {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+
+        }
+
+        @Override
+        public String toString() {
+            return "XYZ{" + "x=" + x + ", y=" + y + ", z=" + z + '}';
+        }
+
+    }
+
+    // lock Mechanizem ????
     private final static int SIZE = 100;
     public final static int M = 10;
+    public static int minZ = M;
     private final HashMap<Integer, XYZ> toUpdate;
     private final ReadWriteLock readWriteLock = new ReadWriteLock();
     private final Semaphore semUpdateCash = new Semaphore(0);
     HashMap<Integer, XYZ> cash;
-    public static int minZ = M;
+    
 
+    /**
+     * Constructor
+     */
     public CashManager() {
         toUpdate = new HashMap<>();
         cash = new HashMap();
@@ -46,8 +69,7 @@ public class CashManager implements Runnable {
                 XYZ xYz = new XYZ(x, y, z);
                 this.toUpdate.put(x, xYz);
                 System.out.println("execute fun, after put");
-                if(toUpdate.size()>=SIZE/3)
-                {
+                if (toUpdate.size() >= SIZE / 3) {
                     semUpdateCash.release();
                 }
             }
@@ -58,10 +80,9 @@ public class CashManager implements Runnable {
     }
 
     public void updateCash() throws InterruptedException {
-        while(toUpdate.size()<SIZE/3)
-            {
-               semUpdateCash.acquire();
-            }
+        while (toUpdate.size() < SIZE / 3) {
+            semUpdateCash.acquire();
+        }
         readWriteLock.lockWrite();
         try {
             System.err.println("stat update in update fun");
@@ -79,33 +100,33 @@ public class CashManager implements Runnable {
                     }
                 }
             });
-                Set<Map.Entry<Integer, XYZ>> set = toUpdate.entrySet();
-                Iterator<Map.Entry<Integer, XYZ>> itr = set.iterator();
+            Set<Map.Entry<Integer, XYZ>> set = toUpdate.entrySet();
+            Iterator<Map.Entry<Integer, XYZ>> itr = set.iterator();
 
-                if (cash.size()+toUpdate.size() > SIZE) {
-                    for (int i = 0; i < toUpdate.size(); i++) {  // removing the amount of ToUpdate    
-                        try {
-                            cash.remove(values.get(i).x);
-                        } catch (IndexOutOfBoundsException ex) {
-                            break;
-                        }
-                    }
-                    if (values.size() >= toUpdate.size()) {
-                        minZ = values.get(toUpdate.size()).z;
+            if (cash.size() + toUpdate.size() > SIZE) {
+                for (int i = 0; i < toUpdate.size(); i++) {  // removing the amount of ToUpdate    
+                    try {
+                        Database.updateFromCash(values.get(i).x, values.get(i).y, 1);
+                        cash.remove(values.get(i).x);
+                    } catch (IndexOutOfBoundsException ex) {
+                        break;
                     }
                 }
-                for (int i = 0; itr.hasNext()&&cash.size()<=SIZE; i++) {
-                    Map.Entry<Integer, XYZ> elem = itr.next();
-                    cash.put(elem.getKey(), elem.getValue());
+                if (values.size() >= toUpdate.size()) {
+                    minZ = values.get(toUpdate.size()).z;
                 }
-                System.err.println("done update in update fun");
-                toUpdate.clear();
-            } finally {
-                readWriteLock.unlockWrite();
             }
+            for (int i = 0; itr.hasNext() && cash.size() <= SIZE; i++) {
+                Map.Entry<Integer, XYZ> elem = itr.next();
+                cash.put(elem.getKey(), elem.getValue());
+            }
+            System.err.println("done update in update fun");
+            toUpdate.clear();
+        } finally {
+            readWriteLock.unlockWrite();
         }
-    
-    
+    }
+
     public int searchCash(int x) throws InterruptedException {
         readWriteLock.lockRead();
         try {
@@ -134,26 +155,6 @@ public class CashManager implements Runnable {
         }
     }
 
-    static class XYZ {
-
-        int x;
-        int y;
-        int z;
-
-        public XYZ(int x, int y, int z) {
-            this.x = x;
-            this.y = y;
-            this.z = z;
-
-        }
-
-        @Override
-        public String toString() {
-            return "XYZ{" + "x=" + x + ", y=" + y + ", z=" + z + '}';
-        }
-
-    }
-
     public static void main(String[] args) throws InterruptedException {
 
         CashManager c = new CashManager();
@@ -169,18 +170,18 @@ public class CashManager implements Runnable {
         c.updateCash();
         System.out.println(c.cash.toString());
         System.out.println("minZ= " + minZ);
-        for (int i = 30; i < 37; i ++) {
+        for (int i = 30; i < 37; i++) {
             c.execute(i, 2 * i, 100);
         }
         c.updateCash();
         System.out.println(c.cash.toString());
         System.out.println("minZ= " + minZ);
-        for (int i = 30; i < 50; i ++) {
+        for (int i = 30; i < 50; i++) {
             c.execute(i, 2 * i, 100);
         }
         c.updateCash();
         System.out.println(c.cash.toString());
-        System.out.println("minZ= " + minZ);    
+        System.out.println("minZ= " + minZ);
 
     }
 

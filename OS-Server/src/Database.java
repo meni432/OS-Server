@@ -20,7 +20,22 @@ import java.util.logging.Logger;
  */
 public final class Database {
 
-    
+    static class YandZ {
+
+        int y;
+        int z;
+
+        public YandZ() {
+            this.y = 0;
+            this.z = 0;
+        }
+
+        public YandZ(int y, int z) {
+            this.y = y;
+            this.z = z;
+        }
+
+    }
 
     final static int MAX_CAPACITY = 100;
     final static int OBJECT_SIZE = Integer.BYTES * 3;
@@ -77,7 +92,7 @@ public final class Database {
                     return new YandZ(NOT_FOUND, NOT_FOUND);
                 }
             } else {
-                raf.seek(position + Integer.BYTES);  
+                raf.seek(position + Integer.BYTES);
                 return new YandZ(raf.readInt(), raf.readInt());
             }
         } catch (FileNotFoundException | EOFException ex) {
@@ -85,13 +100,13 @@ public final class Database {
         } catch (IOException ex) {
             ex.printStackTrace();
             return new YandZ(NOT_FOUND, NOT_FOUND);
-        }
-        finally{
-            if(raf!=null)
+        } finally {
+            if (raf != null) {
                 try {
                     raf.close();
-            } catch (IOException ex) {
-                Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (IOException ex) {
+                    Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
         }
     }
@@ -115,7 +130,7 @@ public final class Database {
         try {
             readWriteLock.lockRead();
             YandZ yAndZ = readDBHelper(query);
-            System.err.println("---------before execute----+ x="+query+" y="+yAndZ.y+" z="+yAndZ.z);
+            System.err.println("---------before execute----+ x=" + query + " y=" + yAndZ.y + " z=" + yAndZ.z);
             if (yAndZ.z > CashManager.minZ) {
                 System.err.println("try execute in database");
                 cashM.execute(query, yAndZ.y, yAndZ.z);
@@ -185,6 +200,31 @@ public final class Database {
         }
     }
 
+    private static void writeXYZOverZ(int x, int y, int z) {
+        RandomAccessFile raf = null;
+        try {
+            String fileName = getFileName(x);
+            raf = new RandomAccessFile(fileName, "rw");
+
+            int position = getPosition(x);
+            raf.seek(position);
+            raf.writeInt(x);
+            raf.writeInt(y);
+            raf.writeInt(z);
+            raf.close();
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            try {
+                if (raf != null) {
+                    raf.writeInt(1);
+                }
+            } catch (IOException ex1) {
+                Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex1);
+            }
+        }
+    }
+
     public static void writeAll() {
         try {
             readWriteLock.lockWrite();
@@ -227,22 +267,7 @@ public final class Database {
 
         raf.close();
     }
-    static class YandZ {
 
-        int y;
-        int z;
-
-        public YandZ() {
-            this.y = 0;
-            this.z = 0;
-        }
-
-        public YandZ(int y, int z) {
-            this.y = y;
-            this.z = z;
-        }
-
-    }
     /**
      * only for test
      */
