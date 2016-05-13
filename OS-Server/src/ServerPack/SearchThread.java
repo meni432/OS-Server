@@ -40,7 +40,7 @@ public class SearchThread implements Runnable {
         
         try {
  
-            cashReadersPool.execute(new CashReaderThread(this, semDoneReading, query));
+            cashReadersPool.execute(new CashReaderRunnable(this, semDoneReading, query));
             semDoneReading.acquire();// wating to cash reader to done reading.
             if(this.cashAns!=DatabaseManager.NOT_FOUND){
                 Thread.sleep(20);
@@ -48,7 +48,7 @@ public class SearchThread implements Runnable {
                 System.err.println("cash answer x="+query+" y="+this.cashAns);
             }else{
             
-                dBreadersPool.execute(new DBreaderThread(this, semDoneReading, query));
+                dBreadersPool.execute(new DBreaderRunnable(this, semDoneReading, query));
                 semDoneReading.acquire();// wating for DBreaderThread to done reading
                 Thread.sleep(20);
                 ois.getOos().writeObject(this.databaseAnswer); 

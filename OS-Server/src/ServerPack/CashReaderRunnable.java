@@ -11,14 +11,13 @@ import java.util.concurrent.Semaphore;
  *
  * @author ofir Arnon
  */
-public class DBreaderThread implements Runnable{
-
+public class CashReaderRunnable implements Runnable{
     private final SearchThread searchThread;
     private final Semaphore semDoneReading;
     private final int qurey;
     
    
-    public DBreaderThread(SearchThread searchThread, Semaphore semDoneReading,int qurey) {
+    public CashReaderRunnable(SearchThread searchThread, Semaphore semDoneReading,int qurey) {
         this.searchThread = searchThread;
         this.semDoneReading = semDoneReading;
         this.qurey=qurey;
@@ -26,9 +25,8 @@ public class DBreaderThread implements Runnable{
     
      @Override
     public void run() {
-        searchThread.setDatabaseAnswer(DatabaseManager.readY(qurey));
+        searchThread.setCashAnswer(CashManager.searchCash(qurey));
         semDoneReading.release();       
     }
 
-    
 }

@@ -27,9 +27,8 @@ public class CashManager {
     private static final ReadWriteLock readWriteLock = new ReadWriteLock();
     private static final Semaphore semUpdateCash = new Semaphore(0);
     private static final HashMap<Integer, XYZ> cash = new HashMap<>();
-    private static final int QUEUE_SIZE_TO_UPDATE=Server.CASH_SIZE/3;
+    private static final int QUEUE_SIZE_TO_UPDATE = Server.CASH_SIZE / 3;
     public static int minZ = Server.LEAST_TO_CACHE;
-    
 
     private CashManager() {
     } // singleTone desgin Pattern
@@ -38,7 +37,7 @@ public class CashManager {
 
         try {
             readWriteLock.lockRead();
-            
+
             if (z >= minZ) {
                 XYZ xYz = new XYZ(x, y, z);
                 toUpdate.put(x, xYz);//If the map previously contained a mapping for the key, the old value is replaced
@@ -52,13 +51,14 @@ public class CashManager {
             readWriteLock.unlockRead();
         }
     }
+
     public static void updateCash() {
-        try{
-        while (toUpdate.size() < QUEUE_SIZE_TO_UPDATE) {
-            semUpdateCash.acquire();
-        }
-        readWriteLock.lockWrite();
-        
+        try {
+            while (toUpdate.size() < QUEUE_SIZE_TO_UPDATE) {
+                semUpdateCash.acquire();
+            }
+            readWriteLock.lockWrite();
+
             List<XYZ> values = new ArrayList<>(cash.values());
             Collections.sort(values, new Comparator<XYZ>() {
 
@@ -93,18 +93,19 @@ public class CashManager {
                 cash.put(elem.getKey(), elem.getValue());
             }
             toUpdate.clear();
-        }catch(InterruptedException ex){}
-         finally {
+        } catch (InterruptedException ex) {
+        } finally {
             try {
                 readWriteLock.unlockWrite();
-            } catch (InterruptedException ex) {}
+            } catch (InterruptedException ex) {
+            }
         }
     }
 
     public static int searchCash(int x) {
         try {
-        readWriteLock.lockRead();
-        
+            readWriteLock.lockRead();
+
             //System.out.println("search cash fun");
             XYZ ans = cash.get(x);
             if (ans == null) {
@@ -113,13 +114,13 @@ public class CashManager {
                 ans.z++; // also update th cash (refrance) , can cause syn problem?
                 return ans.y;
             }
-        }catch(InterruptedException ex){ return DatabaseManager.NOT_FOUND;}
-        finally {
+        } catch (InterruptedException ex) {
+            return DatabaseManager.NOT_FOUND;
+        } finally {
             readWriteLock.unlockRead();
         }
 
     }
-    
 
     static class XYZ {
 
@@ -151,7 +152,7 @@ public class CashManager {
         CashManager.updateCash();
         System.out.println(c.cash.toString());
         for (int i = 0; i < 10; i += 2) {
-            CashManager.addXYZtoCash(i, 2 * i,  Server.LEAST_TO_CACHE* 2);
+            CashManager.addXYZtoCash(i, 2 * i, Server.LEAST_TO_CACHE * 2);
         }
         CashManager.updateCash();
         System.out.println(c.cash.toString());
