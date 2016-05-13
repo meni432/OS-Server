@@ -28,6 +28,7 @@ public class ConnectionManager implements Runnable {
     }
 
    public void run() {
+       Thread.currentThread().setName("ConnectionManager");
         /// why do we need lock????
         while (true) {
             try {

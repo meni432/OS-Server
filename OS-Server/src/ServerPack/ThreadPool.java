@@ -24,6 +24,19 @@ public class ThreadPool {
             thread.start();
         }
     }
+    
+    public ThreadPool(int noOfThreads, String familyName) {
+        taskQueue = new BlockingQueue();
+
+        for (int i = 0; i < noOfThreads; i++) {
+            threads.add(new PoolThread(taskQueue));
+        }
+        int familyId = 0;
+        for (PoolThread thread : threads) {
+            thread.setName(familyName + (familyId++));
+            thread.start();
+        }
+    }
 
     public void execute(Runnable task) {
         lock.lock();

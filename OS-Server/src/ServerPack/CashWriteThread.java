@@ -14,6 +14,7 @@ public class CashWriteThread implements Runnable{
     @Override
     
     public void run() {
+        Thread.currentThread().setName("CashWriteThread");
         while(true){
         CashManager.updateCash();
         }

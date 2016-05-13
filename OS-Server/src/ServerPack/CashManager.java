@@ -64,13 +64,16 @@ public class CashManager {
 
                 @Override
                 public int compare(XYZ o1, XYZ o2) {
-                    if (o1.z > o2.z) {
+                    if (o1.getZ() > o2.getZ()) {
                         return 1;
-                    } else if (o1.z < o2.z) {
+                    } else if (o1.getZ() < o2.getZ()) {
                         return -1;
                     } else {
                         return 0;
                     }
+
+                    // TODO better implement?
+                    // return Integer.compare(o1.z, o2.z);
                 }
             });
             Set<Map.Entry<Integer, XYZ>> set = toUpdate.entrySet();
@@ -79,13 +82,13 @@ public class CashManager {
             if (cash.size() + toUpdate.size() > Server.CASH_SIZE) {
                 for (int i = 0; i < toUpdate.size(); i++) {  // removing the amount of ToUpdate    
                     try {
-                        cash.remove(values.get(i).x);
+                        cash.remove(values.get(i).getX());
                     } catch (IndexOutOfBoundsException ex) {
                         break;
                     }
                 }
                 if (values.size() >= toUpdate.size()) {
-                    minZ = values.get(toUpdate.size()).z;
+                    minZ = values.get(toUpdate.size()).getZ();
                 }
             }
             for (int i = 0; itr.hasNext() && cash.size() <= Server.CASH_SIZE; i++) {
@@ -95,10 +98,7 @@ public class CashManager {
             toUpdate.clear();
         } catch (InterruptedException ex) {
         } finally {
-            try {
-                readWriteLock.unlockWrite();
-            } catch (InterruptedException ex) {
-            }
+            readWriteLock.unlockWrite();
         }
     }
 
@@ -111,33 +111,13 @@ public class CashManager {
             if (ans == null) {
                 return DatabaseManager.NOT_FOUND;
             } else {
-                ans.z++; // also update th cash (refrance) , can cause syn problem?
-                return ans.y;
+                ans.incZ(); // also update th cash (refrance) , can cause syn problem?
+                return ans.getY();
             }
         } catch (InterruptedException ex) {
             return DatabaseManager.NOT_FOUND;
         } finally {
             readWriteLock.unlockRead();
-        }
-
-    }
-
-    static class XYZ {
-
-        int x;
-        int y;
-        int z;
-
-        public XYZ(int x, int y, int z) {
-            this.x = x;
-            this.y = y;
-            this.z = z;
-
-        }
-
-        @Override
-        public String toString() {
-            return "XYZ{" + "x=" + x + ", y=" + y + ", z=" + z + '}';
         }
 
     }

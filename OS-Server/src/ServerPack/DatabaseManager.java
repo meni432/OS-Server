@@ -23,7 +23,22 @@ import java.util.logging.Logger;
  */
 public final class DatabaseManager {
 
-    
+        static class YandZ {
+
+        int y;
+        int z;
+
+        public YandZ() {
+            this.y = 0;
+            this.z = 0;
+        }
+
+        public YandZ(int y, int z) {
+            this.y = y;
+            this.z = z;
+        }
+
+    }
 
     final static int FILE_MAX_CAPACITY = 100;
     final static int UPDATE_DB_REACHED=1000;
@@ -36,7 +51,8 @@ public final class DatabaseManager {
     private static HashMap<Integer, YandZ> toWrite = new HashMap<>();
 
     private DatabaseManager() {} // SingleTone desgin Pattern
-
+    
+    
     /**
      * generate file name for DB
      *
@@ -263,22 +279,7 @@ public final class DatabaseManager {
 
         raf.close();
     }
-    static class YandZ {
 
-        int y;
-        int z;
-
-        public YandZ() {
-            this.y = 0;
-            this.z = 0;
-        }
-
-        public YandZ(int y, int z) {
-            this.y = y;
-            this.z = z;
-        }
-
-    }
     /**
      * only for test
      */

@@ -13,7 +13,7 @@ import java.util.concurrent.locks.ReentrantLock;
  *
  * @author Meni Samet
  */
-public class SyncArrayList<T> {
+public class SyncArrayList<T>  {
 
     private ArrayList<T> array;
     private final ReentrantLock lock = new ReentrantLock(true);

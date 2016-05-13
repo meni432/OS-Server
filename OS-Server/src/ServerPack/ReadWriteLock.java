@@ -64,7 +64,7 @@ public class ReadWriteLock{
     writingThread = callingThread;
   }
 
-  public synchronized void unlockWrite() throws InterruptedException{
+  public synchronized void unlockWrite(){
     if(!isWriter(Thread.currentThread())){
       throw new IllegalMonitorStateException("Calling Thread does not" +
         " hold the write lock on this ReadWriteLock");

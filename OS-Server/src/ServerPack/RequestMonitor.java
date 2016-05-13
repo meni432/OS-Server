@@ -30,6 +30,7 @@ public class RequestMonitor extends Thread {
         this.cashReadersPool=cashReadersPool;
         this.dBreadersPool=dBreadersPool;
         this.lock = lock;
+        this.setName("RequestMonitor");
     }
 
     @Override

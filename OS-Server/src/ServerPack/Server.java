@@ -31,9 +31,9 @@ public class Server {
      * @param args the command line arguments
      */
     public static void creatsThreadPools() {
-        seachersPool = new ThreadPool(S_THREADS_NUM);
-        cashReadersPool = new ThreadPool(NUMBER_OF_READER_THREADS);
-        dBreadersPool = new ThreadPool(NUMBER_OF_READER_THREADS);
+        seachersPool = new ThreadPool(S_THREADS_NUM, "seachersPool");
+        cashReadersPool = new ThreadPool(NUMBER_OF_READER_THREADS, "cashReadersPool");
+        dBreadersPool = new ThreadPool(NUMBER_OF_READER_THREADS, "dBreadersPool");
     }
 
     public static void startWriteThreads() {
