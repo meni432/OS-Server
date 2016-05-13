@@ -185,6 +185,38 @@ public final class DatabaseManager {
             }
         }
     }
+    
+    /**
+     * write  / update new (x, y, newZ)
+     * @param x the request value
+     * @param y
+     * @param newZ 
+     */
+    private static void writeXYOvverideZ(int x, int y, int newZ) {
+        RandomAccessFile raf = null;
+        try {
+            String fileName = getFileName(x);
+            raf = new RandomAccessFile(fileName, "rw");
+
+            int position = getPosition(x);
+            raf.seek(position);
+            raf.writeInt(x);
+            raf.writeInt(y);
+            raf.writeInt(newZ);
+            raf.close();
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(DatabaseManager.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            try {
+                if (raf != null) {
+                    raf.writeInt(1);
+                }
+            } catch (IOException ex1) {
+                Logger.getLogger(DatabaseManager.class.getName()).log(Level.SEVERE, null, ex1);
+            }
+        }
+    }
+    
 
     public static void writeAll() {
         try {
@@ -253,7 +285,7 @@ public final class DatabaseManager {
     public static void main(String[] args) {
         try {
             // debug DB file
-            String fileName = "600.db";
+            String fileName = "100.db";
             RandomAccessFile raf = new RandomAccessFile(fileName, "r");
             for (int i = 0; i < 100; i++) {
                 System.out.println("x[" + i + "]= " + raf.readInt() + " y[" + i + "]= " + raf.readInt() + " z[" + i + "]= " + raf.readInt());
