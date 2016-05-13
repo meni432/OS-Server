@@ -1,8 +1,10 @@
 package ServerPack;
 
-
 import java.util.ArrayList;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /*
  * To change this license header, choose License Headers in Project Properties.
@@ -13,46 +15,47 @@ import java.util.concurrent.locks.ReentrantLock;
  *
  * @author Meni Samet
  */
-public class SyncArrayList<T>  {
+public class SyncArrayList<T> {
 
-    private ArrayList<T> array;
+    private ArrayList<T> array = new ArrayList<>();
     private final ReentrantLock lock = new ReentrantLock(true);
-    
-    public void add(T data){
+
+    public void add(T data) {
         lock.lock();
-        try{
+        try {
             array.add(data);
         } finally {
             lock.unlock();
         }
     }
-    
-    public T get(int index){
+
+    public T get(int index) {
         lock.lock();
-        try{
+        try {
             return array.get(index);
-        }finally{
+        } finally {
             lock.unlock();
         }
     }
-    
+
     public T remove(int index) {
         lock.lock();
-        try{
+        try {
             return array.remove(index);
         } finally {
             lock.unlock();
         }
     }
     
-    public boolean remove(T data){
+    public int size(){
         lock.lock();
-        try{
-            return array.remove(data);
+        try {
+            return array.size();
         } finally {
             lock.unlock();
         }
     }
-    
-    
+
+ 
+
 }

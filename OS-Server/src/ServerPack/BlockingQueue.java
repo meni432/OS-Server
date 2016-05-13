@@ -42,7 +42,6 @@ public class BlockingQueue {
             return queue.isEmpty();
         } finally {
             lock.unlock();
-
         }
     }
 

@@ -42,11 +42,13 @@ public class Server {
     }
 
     public static void startConnection() {
+        
         try {
             serverSocket = new ServerSocket(PORT);
-            ConnectionManager connectionM = new ConnectionManager(serverSocket, lock);
+            SyncArrayList<InOutStreams> streamList = new SyncArrayList<>();
+            ConnectionManager connectionM = new ConnectionManager(serverSocket, streamList, lock);
             new Thread(connectionM).start();
-            new RequestMonitor(connectionM.getStreamList(), seachersPool, lock, cashReadersPool, dBreadersPool).start();
+            new RequestMonitor(streamList, seachersPool, cashReadersPool, dBreadersPool, lock).start();
         } catch (IOException ex) {
             System.out.println("cannot creats server socket");
             System.exit(1);

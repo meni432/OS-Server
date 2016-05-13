@@ -5,7 +5,6 @@ package ServerPack;
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -16,37 +15,38 @@ import java.util.concurrent.locks.ReentrantLock;
 public class ConnectionManager implements Runnable {
 // TODO change in the client to ObjectInputStream
 
-    private final ReentrantLock lock;
     ServerSocket socketS;
-    List<InOutStreams> streamList;
+    SyncArrayList<InOutStreams> streamList;
     int currentStream = 0;
+    ReentrantLock lock;
 
-    public ConnectionManager(ServerSocket socketS, ReentrantLock lock) {
+    public ConnectionManager(ServerSocket socketS, SyncArrayList<InOutStreams> streamList, ReentrantLock lock) {
         this.socketS = socketS;
-        this.streamList = Collections.synchronizedList(new ArrayList<InOutStreams>());
+        this.streamList = streamList;
         this.lock = lock;
     }
 
-   public void run() {
-       Thread.currentThread().setName("ConnectionManager");
+    @Override
+    public void run() {
+        Thread.currentThread().setName("ConnectionManager");
         /// why do we need lock????
         while (true) {
             try {
                 Socket s = socketS.accept();
                 System.out.println("connection accept");
-              lock.lock();
                 try {
                     streamList.add(new InOutStreams(s));
+                    System.out.println("connection add");
                 } finally {
-                    lock.unlock();
                 }
             } catch (Exception e) {
                 System.out.println("problem in the seerver connection");
+                e.printStackTrace();
             }
         }
     }
 
-    public List<InOutStreams> getStreamList() {
+    public SyncArrayList<InOutStreams> getStreamList() {
         return streamList;
     }
 
