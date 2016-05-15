@@ -33,11 +33,13 @@ public class ConnectionManager implements Runnable {
         while (true) {
             try {
                 Socket s = socketS.accept();
+                lock.lock();
                 System.out.println("connection accept");
                 try {
                     streamList.add(new InOutStreams(s));
                     System.out.println("connection add");
                 } finally {
+                    lock.unlock();
                 }
             } catch (Exception e) {
                 System.out.println("problem in the seerver connection");
