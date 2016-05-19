@@ -1,13 +1,8 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package ServerPack;
 
 /**
- *
- * @author Meni Samet
+ * XYZ Class,
+ * z value synchronize with read write lock
  */
 class XYZ {
 
@@ -46,6 +41,11 @@ class XYZ {
             this.y = y;
         }
 
+        /**
+         * get z synchronize function
+         * with read lock (more then one threads can read z)
+         * @return z value
+         */
         public int getZ() {
             try {
                 lock.lockRead();
@@ -59,12 +59,14 @@ class XYZ {
             
             return LockError;
         }
+        
+
 
         /**
          * not for use currently!!!!!
          * @param z 
          */
-        public void setZ(int z) {
+        private void setZ(int z) {
             try {
                 lock.lockWrite();
                 this.z = z;
@@ -76,6 +78,10 @@ class XYZ {
             }
         }
         
+        /**
+         * inc z synchronize function
+         * with write lock
+         */
         public void incZ() {
             try {
                 lock.lockWrite();
@@ -87,5 +93,7 @@ class XYZ {
                 lock.unlockWrite();
             }
         }
+        
+       
 
     }

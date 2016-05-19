@@ -14,6 +14,10 @@ public class ThreadPool {
 
     private final ReentrantLock lock = new ReentrantLock(true);
 
+    /**
+     * default constructor
+     * @param noOfThreads  number of thread to create in this thread pool
+     */
     public ThreadPool(int noOfThreads) {
         taskQueue = new BlockingQueue();
 
@@ -25,6 +29,11 @@ public class ThreadPool {
         }
     }
     
+    /**
+     * constructor with namely threads 
+     * @param noOfThreads
+     * @param familyName 
+     */
     public ThreadPool(int noOfThreads, String familyName) {
         taskQueue = new BlockingQueue();
 
@@ -38,6 +47,10 @@ public class ThreadPool {
         }
     }
 
+    /**
+     * insert new task to thread pool
+     * @param task Runnable task
+     */
     public void execute(Runnable task) {
         lock.lock();
         try {
@@ -52,6 +65,10 @@ public class ThreadPool {
 
     }
 
+    /**
+     *  stop all thread in this thread pool
+     * TODO not test / implement yet
+     */
     public void stop() {
         lock.lock();
         try {

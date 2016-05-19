@@ -30,6 +30,9 @@ public class CashManager {
     private static final int QUEUE_SIZE_TO_UPDATE = Server.CASH_SIZE / 3;
     public static int minZ = Server.LEAST_TO_CACHE;
 
+    private static final int TIME_TO_UPDATE_MS = 5000;
+    private static long LastUpdate = System.currentTimeMillis();
+
     private CashManager() {
     } // singleTone desgin Pattern
 
@@ -41,9 +44,7 @@ public class CashManager {
             if (z >= minZ) {
                 XYZ xYz = new XYZ(x, y, z);
                 toUpdate.put(x, xYz);//If the map previously contained a mapping for the key, the old value is replaced
-                if (toUpdate.size() >= QUEUE_SIZE_TO_UPDATE) {
-                    semUpdateCash.release();
-                }
+
             }
         } catch (InterruptedException ex) {
             Logger.getLogger(CashManager.class.getName()).log(Level.SEVERE, null, ex);
@@ -54,8 +55,10 @@ public class CashManager {
 
     public static void updateCash() {
         try {
-            while (toUpdate.size() < QUEUE_SIZE_TO_UPDATE) {
+            long diffTime = System.currentTimeMillis() - LastUpdate;
+            while (toUpdate.size() < QUEUE_SIZE_TO_UPDATE && diffTime < TIME_TO_UPDATE_MS) {
                 semUpdateCash.acquire();
+                diffTime = System.currentTimeMillis() - LastUpdate;
             }
             readWriteLock.lockWrite();
 
@@ -64,16 +67,7 @@ public class CashManager {
 
                 @Override
                 public int compare(XYZ o1, XYZ o2) {
-                    if (o1.getZ() > o2.getZ()) {
-                        return 1;
-                    } else if (o1.getZ() < o2.getZ()) {
-                        return -1;
-                    } else {
-                        return 0;
-                    }
-
-                    // TODO better implement?
-                    // return Integer.compare(o1.z, o2.z);
+                    return Integer.compare(o1.getZ(), o2.getZ());
                 }
             });
             Set<Map.Entry<Integer, XYZ>> set = toUpdate.entrySet();
@@ -82,6 +76,10 @@ public class CashManager {
             if (cash.size() + toUpdate.size() > Server.CASH_SIZE) {
                 for (int i = 0; i < toUpdate.size(); i++) {  // removing the amount of ToUpdate    
                     try {
+                        DatabaseManager.YandZ UpdateCash = new DatabaseManager.YandZ(values.get(i).getY(), values.get(i).getZ());
+                        UpdateCash.setOverWriteZ(true);
+                        DatabaseManager.updateFromCash(values.get(i).getX(), UpdateCash);
+                        // update values.get(i)
                         cash.remove(values.get(i).getX());
                     } catch (IndexOutOfBoundsException ex) {
                         break;
@@ -96,6 +94,7 @@ public class CashManager {
                 cash.put(elem.getKey(), elem.getValue());
             }
             toUpdate.clear();
+            LastUpdate = System.currentTimeMillis();
         } catch (InterruptedException ex) {
         } finally {
             readWriteLock.unlockWrite();
@@ -105,15 +104,19 @@ public class CashManager {
     public static int searchCash(int x) {
         try {
             readWriteLock.lockRead();
-
+            long diffTime = System.currentTimeMillis() - LastUpdate;
+            if (toUpdate.size() >= QUEUE_SIZE_TO_UPDATE || diffTime >= TIME_TO_UPDATE_MS) {
+                semUpdateCash.release();
+            }
             //System.out.println("search cash fun");
-            XYZ ans = cash.get(x);
+            XYZ ans = cash.get(x);           
             if (ans == null) {
                 return DatabaseManager.NOT_FOUND;
             } else {
                 ans.incZ(); // also update th cash (refrance) , can cause syn problem?
                 return ans.getY();
             }
+
         } catch (InterruptedException ex) {
             return DatabaseManager.NOT_FOUND;
         } finally {

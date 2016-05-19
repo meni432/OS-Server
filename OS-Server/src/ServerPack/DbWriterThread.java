@@ -16,6 +16,7 @@ public class DbWriterThread implements Runnable {
         Thread.currentThread().setName("DbWriterThread");
         while (true) {
             DatabaseManager.writeAll();
+            System.err.println("------------update DB completed---------------");
         }
         
     }

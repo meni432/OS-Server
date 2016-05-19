@@ -6,11 +6,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 /**
  *
  * @author Meni Samet
@@ -20,6 +15,10 @@ public class SyncArrayList<T> {
     private ArrayList<T> array = new ArrayList<>();
     private final ReentrantLock lock = new ReentrantLock(true);
 
+    /**
+     * add element to array
+     * @param data 
+     */
     public void add(T data) {
         lock.lock();
         try {
@@ -29,6 +28,11 @@ public class SyncArrayList<T> {
         }
     }
 
+    /**
+     * get element from array
+     * @param index index of element in array
+     * @return T object at index
+     */
     public T get(int index) {
         lock.lock();
         try {
@@ -38,6 +42,11 @@ public class SyncArrayList<T> {
         }
     }
 
+    /**
+     * remove element in given index
+     * @param index index of element to remove
+     * @return the object T that remove
+     */
     public T remove(int index) {
         lock.lock();
         try {
@@ -47,6 +56,9 @@ public class SyncArrayList<T> {
         }
     }
     
+    /**
+     * @return size of array (number of elements)
+     */
     public int size(){
         lock.lock();
         try {

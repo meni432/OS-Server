@@ -21,9 +21,10 @@ public class InOutStreams {
    private final Socket socket;
     InOutStreams(Socket socket) throws IOException
     {
+        this.socket=socket;  
+        socket.setSoTimeout(Server.TIME_TO_WAIT*2);
         this.ois=new ObjectInputStream(socket.getInputStream());
         this.oos=new ObjectOutputStream(socket.getOutputStream());
-        this.socket=socket;              
     }
 
     public ObjectInputStream getOis() {

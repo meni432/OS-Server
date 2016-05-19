@@ -13,12 +13,12 @@ import java.util.concurrent.Semaphore;
  */
 public class DBreaderRunnable implements Runnable{
 
-    private final SearchThread searchThread;
+    private final SearchRunable searchThread;
     private final Semaphore semDoneReading;
     private final int qurey;
     
    
-    public DBreaderRunnable(SearchThread searchThread, Semaphore semDoneReading,int qurey) {
+    public DBreaderRunnable(SearchRunable searchThread, Semaphore semDoneReading,int qurey) {
         this.searchThread = searchThread;
         this.semDoneReading = semDoneReading;
         this.qurey=qurey;

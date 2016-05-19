@@ -12,12 +12,12 @@ import java.util.concurrent.Semaphore;
  * @author ofir Arnon
  */
 public class CashReaderRunnable implements Runnable{
-    private final SearchThread searchThread;
+    private final SearchRunable searchThread;
     private final Semaphore semDoneReading;
     private final int qurey;
     
    
-    public CashReaderRunnable(SearchThread searchThread, Semaphore semDoneReading,int qurey) {
+    public CashReaderRunnable(SearchRunable searchThread, Semaphore semDoneReading,int qurey) {
         this.searchThread = searchThread;
         this.semDoneReading = semDoneReading;
         this.qurey=qurey;

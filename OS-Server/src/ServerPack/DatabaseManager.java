@@ -5,7 +5,6 @@ package ServerPack;
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -23,14 +22,16 @@ import java.util.logging.Logger;
  */
 public final class DatabaseManager {
 
-        static class YandZ {
+    static class YandZ {
 
         int y;
         int z;
+        boolean overWriteZ;
 
         public YandZ() {
             this.y = 0;
             this.z = 0;
+            overWriteZ = false;
         }
 
         public YandZ(int y, int z) {
@@ -38,21 +39,28 @@ public final class DatabaseManager {
             this.z = z;
         }
 
+        public void setOverWriteZ(boolean overWriteZ) {
+            this.overWriteZ = overWriteZ;
+        }
+
     }
 
     final static int FILE_MAX_CAPACITY = 100;
-    final static int UPDATE_DB_REACHED=1000;
+    final static int UPDATE_DB_REACHED = 100;
     final static int OBJECT_SIZE = Integer.BYTES * 3;
     final static int NOT_FOUND = -1;
-    final static int INITIAL_VALUE = 1;    
+    final static int INITIAL_VALUE = 1;
+    private static final int TIME_TO_UPDATE_MS = 5000;
     private static final ReadWriteLock readWriteLock = new ReadWriteLock();
     private static final Semaphore semUpdateDB = new Semaphore(0);
-
+    
+    private static long LastUpdate = System.currentTimeMillis();
+    
     private static HashMap<Integer, YandZ> toWrite = new HashMap<>();
 
-    private DatabaseManager() {} // SingleTone desgin Pattern
-    
-    
+    private DatabaseManager() {
+    } // SingleTone desgin Pattern
+
     /**
      * generate file name for DB
      *
@@ -94,7 +102,7 @@ public final class DatabaseManager {
                     return new YandZ(NOT_FOUND, NOT_FOUND);
                 }
             } else {
-                raf.seek(position + Integer.BYTES);  
+                raf.seek(position + Integer.BYTES);
                 return new YandZ(raf.readInt(), raf.readInt());
             }
         } catch (FileNotFoundException | EOFException ex) {
@@ -102,23 +110,20 @@ public final class DatabaseManager {
         } catch (IOException ex) {
             ex.printStackTrace();
             return new YandZ(NOT_FOUND, NOT_FOUND);
-        }
-        finally{
-            if(raf!=null)
+        } finally {
+            if (raf != null) {
                 try {
                     raf.close();
-            } catch (IOException ex) {
-                Logger.getLogger(DatabaseManager.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (IOException ex) {
+                    Logger.getLogger(DatabaseManager.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
         }
     }
 
-    public static void updateFromCash(int x, int y, int incZ) {
+    public static void updateFromCash(int x, YandZ toPut) {
         try {
             readWriteLock.lockRead();
-            YandZ toPut = new YandZ();
-            toPut.y = y;
-            toPut.z = incZ;
             toWrite.put(x, toPut);
         } catch (InterruptedException ex) {
             Logger.getLogger(DatabaseManager.class.getName()).log(Level.SEVERE, null, ex);
@@ -127,7 +132,48 @@ public final class DatabaseManager {
         }
     }
 
-    public static int readY(int query) {
+//    public static int readY(int query) {
+//
+//        try {
+//            readWriteLock.lockRead();
+//
+//            int ans;
+//            YandZ yAndZAns;
+//            if ((yAndZAns = toWrite.get(query)) != null) {
+//                yAndZAns.z++;
+//                ans = yAndZAns.y; // ofir added this line because we need the ans from the hashTable(ans=-1 if it's not in the DB) 
+//            } else {
+//                yAndZAns = readDBHelper(query);
+//                ans = yAndZAns.y;
+//
+//                YandZ toUpdate = new YandZ();
+//                if (ans != NOT_FOUND) {
+//                    toUpdate.y = ans;
+//                } else {
+//                    toUpdate.y = ans = (int) (Math.random() * Server.RANDOM_RANGE) + 1;
+//                }
+//                toUpdate.z = 1;
+//                toWrite.put(query, toUpdate);
+//            }
+//            // cehck for cash update
+//            if (toWrite.size() >= UPDATE_DB_REACHED) {
+//                semUpdateDB.release();
+//            }
+//            if (yAndZAns.z > CashManager.minZ) {
+//                CashManager.addXYZtoCash(query, yAndZAns.y, yAndZAns.z);
+//            }
+//            return ans;
+//
+//        } catch (InterruptedException ex) {
+//            ex.printStackTrace();
+//        } finally {
+//            readWriteLock.unlockRead();
+//        }
+//
+//        return NOT_FOUND;
+//    }
+
+     public static int readY(int query) {
 
         try {
             readWriteLock.lockRead();
@@ -151,8 +197,10 @@ public final class DatabaseManager {
                 temp.z = 1;
                 toWrite.put(query, temp);
             }
-            if(toWrite.size()>=UPDATE_DB_REACHED)
+            long diffTime = System.currentTimeMillis() - LastUpdate;
+            if(toWrite.size()>=UPDATE_DB_REACHED || diffTime > TIME_TO_UPDATE_MS)
             {
+                System.out.println("release update");
                 semUpdateDB.release();
             }
             return ans;
@@ -165,7 +213,6 @@ public final class DatabaseManager {
 
         return NOT_FOUND;
     }
-
     /**
      * write new (x,y,1)
      *
@@ -201,12 +248,13 @@ public final class DatabaseManager {
             }
         }
     }
-    
+
     /**
-     * write  / update new (x, y, newZ)
+     * write / update new (x, y, newZ)
+     *
      * @param x the request value
      * @param y
-     * @param newZ 
+     * @param newZ
      */
     private static void writeXYOvverideZ(int x, int y, int newZ) {
         RandomAccessFile raf = null;
@@ -232,13 +280,15 @@ public final class DatabaseManager {
             }
         }
     }
-    
 
     public static void writeAll() {
         try {
-            while(toWrite.size()<UPDATE_DB_REACHED){
-            semUpdateDB.acquire();
+            long diffTime = System.currentTimeMillis() - LastUpdate;
+            while (toWrite.size() < UPDATE_DB_REACHED && diffTime < TIME_TO_UPDATE_MS ) {
+                semUpdateDB.acquire();
+                diffTime = System.currentTimeMillis() - LastUpdate;
             }
+            System.out.println("after acquire");
             readWriteLock.lockWrite();
             try {
                 Set<Entry<Integer, YandZ>> set = toWrite.entrySet();
@@ -248,6 +298,7 @@ public final class DatabaseManager {
                     writeXYZ(elm.getKey(), elm.getValue().y, elm.getValue().z);
                 }
                 toWrite.clear();
+                LastUpdate=System.currentTimeMillis();
             } finally {
                 readWriteLock.unlockWrite();
             }
@@ -286,7 +337,7 @@ public final class DatabaseManager {
     public static void main(String[] args) {
         try {
             // debug DB file
-            String fileName = "100.db";
+            String fileName = "3300.db";
             RandomAccessFile raf = new RandomAccessFile(fileName, "r");
             for (int i = 0; i < 100; i++) {
                 System.out.println("x[" + i + "]= " + raf.readInt() + " y[" + i + "]= " + raf.readInt() + " z[" + i + "]= " + raf.readInt());
