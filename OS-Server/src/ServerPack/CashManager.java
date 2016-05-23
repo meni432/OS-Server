@@ -76,9 +76,9 @@ public class CashManager {
             if (cash.size() + toUpdate.size() > Server.CASH_SIZE) {
                 for (int i = 0; i < toUpdate.size(); i++) {  // removing the amount of ToUpdate    
                     try {
-                        DatabaseManager.YandZ UpdateCash = new DatabaseManager.YandZ(values.get(i).getY(), values.get(i).getZ());
+                        XYZ UpdateCash = new XYZ(values.get(i).getX(),values.get(i).getY(), values.get(i).getZ());
                         UpdateCash.setOverWriteZ(true);
-                        DatabaseManager.updateFromCash(values.get(i).getX(), UpdateCash);
+                        DatabaseManager.updateFromCash(UpdateCash);
                         // update values.get(i)
                         cash.remove(values.get(i).getX());
                     } catch (IndexOutOfBoundsException ex) {

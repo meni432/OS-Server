@@ -22,29 +22,28 @@ import java.util.logging.Logger;
  */
 public final class DatabaseManager {
 
-    static class YandZ {
-
-        int y;
-        int z;
-        boolean overWriteZ;
-
-        public YandZ() {
-            this.y = 0;
-            this.z = 0;
-            overWriteZ = false;
-        }
-
-        public YandZ(int y, int z) {
-            this.y = y;
-            this.z = z;
-        }
-
-        public void setOverWriteZ(boolean overWriteZ) {
-            this.overWriteZ = overWriteZ;
-        }
-
-    }
-
+//    static class YandZ {
+//
+//        int y;
+//        int z;
+//        boolean overWriteZ;
+//
+//        public YandZ() {
+//            this.y = 0;
+//            this.z = 0;
+//            overWriteZ = false;
+//        }
+//
+//        public YandZ(int y, int z) {
+//            this.y = y;
+//            this.z = z;
+//        }
+//
+//        public void setOverWriteZ(boolean overWriteZ) {
+//            this.overWriteZ = overWriteZ;
+//        }
+//
+//    }
     final static int FILE_MAX_CAPACITY = 100;
     final static int UPDATE_DB_REACHED = 100;
     final static int OBJECT_SIZE = Integer.BYTES * 3;
@@ -53,10 +52,10 @@ public final class DatabaseManager {
     private static final int TIME_TO_UPDATE_MS = 5000;
     private static final ReadWriteLock readWriteLock = new ReadWriteLock();
     private static final Semaphore semUpdateDB = new Semaphore(0);
-    
+
     private static long LastUpdate = System.currentTimeMillis();
-    
-    private static HashMap<Integer, YandZ> toWrite = new HashMap<>();
+
+    private static HashMap<Integer, XYZ> toWrite = new HashMap<>();
 
     private DatabaseManager() {
     } // SingleTone desgin Pattern
@@ -86,7 +85,7 @@ public final class DatabaseManager {
      * @return y value
      * @throws IOException
      */
-    private static YandZ readDBHelper(int x) {
+    private static XYZ readDBHelper(int x) {
         RandomAccessFile raf = null;
         try {
             String fileName = getFileName(x);
@@ -97,19 +96,19 @@ public final class DatabaseManager {
             if (read == 0) {
                 if (x == 0) {
                     raf.seek(Integer.BYTES);
-                    return new YandZ(raf.readInt(), raf.readInt());
+                    return new XYZ(x, raf.readInt(), raf.readInt());
                 } else {
-                    return new YandZ(NOT_FOUND, NOT_FOUND);
+                    return new XYZ(x, NOT_FOUND, NOT_FOUND);
                 }
             } else {
                 raf.seek(position + Integer.BYTES);
-                return new YandZ(raf.readInt(), raf.readInt());
+                return new XYZ(x, raf.readInt(), raf.readInt());
             }
         } catch (FileNotFoundException | EOFException ex) {
-            return new YandZ(NOT_FOUND, NOT_FOUND);
+            return new XYZ(x, NOT_FOUND, NOT_FOUND);
         } catch (IOException ex) {
             ex.printStackTrace();
-            return new YandZ(NOT_FOUND, NOT_FOUND);
+            return new XYZ(x, NOT_FOUND, NOT_FOUND);
         } finally {
             if (raf != null) {
                 try {
@@ -121,10 +120,10 @@ public final class DatabaseManager {
         }
     }
 
-    public static void updateFromCash(int x, YandZ toPut) {
+    public static void updateFromCash(XYZ toPut) {
         try {
             readWriteLock.lockRead();
-            toWrite.put(x, toPut);
+            toWrite.put(toPut.getX(), toPut);
         } catch (InterruptedException ex) {
             Logger.getLogger(DatabaseManager.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
@@ -132,40 +131,81 @@ public final class DatabaseManager {
         }
     }
 
+    public static int readY(int query) {
+
+        try {
+            readWriteLock.lockRead();
+
+            int ans;
+            XYZ yAndZAns;
+            if ((yAndZAns = toWrite.get(query)) != null) {
+                yAndZAns.incZ();
+                ans = yAndZAns.getY(); // ofir added this line because we need the ans from the hashTable(ans=-1 if it's not in the DB) 
+            } else {
+                yAndZAns = readDBHelper(query);
+                ans = yAndZAns.getY();
+
+                XYZ toUpdate = new XYZ();
+                if (ans != NOT_FOUND) {
+                    toUpdate.setY(ans);
+                } else {
+                    ans = (int) (Math.random() * Server.RANDOM_RANGE) + 1;
+                    toUpdate.setY(ans);
+                }
+                toUpdate.incZ();
+                toWrite.put(query, toUpdate);
+            }
+            // cehck for cash update
+            long diffTime = System.currentTimeMillis() - LastUpdate;
+            if (toWrite.size() >= UPDATE_DB_REACHED || diffTime > TIME_TO_UPDATE_MS) {
+                semUpdateDB.release();
+            }
+            if (yAndZAns.getZ() > CashManager.minZ) {
+                CashManager.addXYZtoCash(query, yAndZAns.getY(), yAndZAns.getZ());
+            }
+            return ans;
+
+        } catch (InterruptedException ex) {
+            ex.printStackTrace();
+        } finally {
+            readWriteLock.unlockRead();
+        }
+
+        return NOT_FOUND;
+    }
 //    public static int readY(int query) {
 //
 //        try {
 //            readWriteLock.lockRead();
-//
-//            int ans;
-//            YandZ yAndZAns;
-//            if ((yAndZAns = toWrite.get(query)) != null) {
-//                yAndZAns.z++;
-//                ans = yAndZAns.y; // ofir added this line because we need the ans from the hashTable(ans=-1 if it's not in the DB) 
-//            } else {
-//                yAndZAns = readDBHelper(query);
-//                ans = yAndZAns.y;
-//
-//                YandZ toUpdate = new YandZ();
-//                if (ans != NOT_FOUND) {
-//                    toUpdate.y = ans;
-//                } else {
-//                    toUpdate.y = ans = (int) (Math.random() * Server.RANDOM_RANGE) + 1;
-//                }
-//                toUpdate.z = 1;
-//                toWrite.put(query, toUpdate);
+//            XYZ yAndZ = readDBHelper(query);
+//            if (yAndZ.getZ() > CashManager.minZ) {
+//                CashManager.addXYZtoCash(query, yAndZ.getY(), yAndZ.getZ());
 //            }
-//            // cehck for cash update
-//            if (toWrite.size() >= UPDATE_DB_REACHED) {
+//            int ans = yAndZ.getY();
+//            XYZ temp;
+//            if ((temp = toWrite.get(query)) != null) {
+//                temp.incZ();
+//                ans = temp.getY(); // ofir added this line because we need the ans from the hashTable(ans=-1 if it's not in the DB) 
+//            } else if (ans != NOT_FOUND) {
+//                temp = new XYZ();
+//                temp.setY(ans); 
+//                temp.incZ();
+//                toWrite.put(query, temp);
+//            } else {
+//                temp = new XYZ();
+//                ans  = (int) (Math.random() * Server.RANDOM_RANGE) + 1;
+//                temp.setY(ans);
+//                temp.incZ();
+//                toWrite.put(query, temp);
+//            }
+//            long diffTime = System.currentTimeMillis() - LastUpdate;
+//            if (toWrite.size() >= UPDATE_DB_REACHED || diffTime > TIME_TO_UPDATE_MS) {
+//                System.out.println("release update");
 //                semUpdateDB.release();
 //            }
-//            if (yAndZAns.z > CashManager.minZ) {
-//                CashManager.addXYZtoCash(query, yAndZAns.y, yAndZAns.z);
-//            }
 //            return ans;
-//
 //        } catch (InterruptedException ex) {
-//            ex.printStackTrace();
+//            Logger.getLogger(DatabaseManager.class.getName()).log(Level.SEVERE, null, ex);
 //        } finally {
 //            readWriteLock.unlockRead();
 //        }
@@ -173,46 +213,6 @@ public final class DatabaseManager {
 //        return NOT_FOUND;
 //    }
 
-     public static int readY(int query) {
-
-        try {
-            readWriteLock.lockRead();
-            YandZ yAndZ = readDBHelper(query);
-            if (yAndZ.z > CashManager.minZ) {
-                CashManager.addXYZtoCash(query, yAndZ.y, yAndZ.z);
-            }
-            int ans = yAndZ.y;
-            YandZ temp;
-            if ((temp = toWrite.get(query)) != null) {
-                temp.z++;
-                ans = temp.y; // ofir added this line because we need the ans from the hashTable(ans=-1 if it's not in the DB) 
-            } else if (ans != NOT_FOUND) {
-                temp = new YandZ();
-                temp.y = ans;
-                temp.z = 1;
-                toWrite.put(query, temp);
-            } else {
-                temp = new YandZ();
-                ans = temp.y = (int) (Math.random() * Server.RANDOM_RANGE) + 1;
-                temp.z = 1;
-                toWrite.put(query, temp);
-            }
-            long diffTime = System.currentTimeMillis() - LastUpdate;
-            if(toWrite.size()>=UPDATE_DB_REACHED || diffTime > TIME_TO_UPDATE_MS)
-            {
-                System.out.println("release update");
-                semUpdateDB.release();
-            }
-            return ans;
-        } catch (InterruptedException ex) {
-            Logger.getLogger(DatabaseManager.class.getName()).log(Level.SEVERE, null, ex);
-        }   
-        finally {
-            readWriteLock.unlockRead();
-        }
-
-        return NOT_FOUND;
-    }
     /**
      * write new (x,y,1)
      *
@@ -284,21 +284,21 @@ public final class DatabaseManager {
     public static void writeAll() {
         try {
             long diffTime = System.currentTimeMillis() - LastUpdate;
-            while (toWrite.size() < UPDATE_DB_REACHED && diffTime < TIME_TO_UPDATE_MS ) {
+            while (toWrite.size() < UPDATE_DB_REACHED && diffTime < TIME_TO_UPDATE_MS) {
                 semUpdateDB.acquire();
                 diffTime = System.currentTimeMillis() - LastUpdate;
             }
             System.out.println("after acquire");
             readWriteLock.lockWrite();
             try {
-                Set<Entry<Integer, YandZ>> set = toWrite.entrySet();
-                Iterator<Entry<Integer, YandZ>> itr = set.iterator();
+                Set<Entry<Integer, XYZ>> set = toWrite.entrySet();
+                Iterator<Entry<Integer, XYZ>> itr = set.iterator();
                 while (itr.hasNext()) {
-                    Entry<Integer, YandZ> elm = (Entry<Integer, YandZ>) itr.next();
-                    writeXYZ(elm.getKey(), elm.getValue().y, elm.getValue().z);
+                    Entry<Integer, XYZ> elm = (Entry<Integer, XYZ>) itr.next();
+                    writeXYZ(elm.getKey(), elm.getValue().getY(), elm.getValue().getZ());
                 }
                 toWrite.clear();
-                LastUpdate=System.currentTimeMillis();
+                LastUpdate = System.currentTimeMillis();
             } finally {
                 readWriteLock.unlockWrite();
             }

@@ -84,8 +84,7 @@ public class RequestMonitor extends Thread {
                         ex.printStackTrace();
                     }
 
-                    if (executeRead
-                            == false) {
+                    if (executeRead == false) {
                         readObjectThread.interrupt();
                         System.err.println("interrupt operation on");
                     }
