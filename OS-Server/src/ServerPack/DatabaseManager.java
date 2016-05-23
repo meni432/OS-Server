@@ -22,28 +22,6 @@ import java.util.logging.Logger;
  */
 public final class DatabaseManager {
 
-//    static class YandZ {
-//
-//        int y;
-//        int z;
-//        boolean overWriteZ;
-//
-//        public YandZ() {
-//            this.y = 0;
-//            this.z = 0;
-//            overWriteZ = false;
-//        }
-//
-//        public YandZ(int y, int z) {
-//            this.y = y;
-//            this.z = z;
-//        }
-//
-//        public void setOverWriteZ(boolean overWriteZ) {
-//            this.overWriteZ = overWriteZ;
-//        }
-//
-//    }
     final static int FILE_MAX_CAPACITY = 100;
     final static int UPDATE_DB_REACHED = 100;
     final static int OBJECT_SIZE = Integer.BYTES * 3;
