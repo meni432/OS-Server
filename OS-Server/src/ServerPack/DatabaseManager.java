@@ -138,8 +138,8 @@ public final class DatabaseManager {
             if (toWrite.size() >= UPDATE_DB_REACHED || diffTime > TIME_TO_UPDATE_MS) {
                 semUpdateDB.release();
             }
-            if (yAndZAns.getZ() > CashManager.minZ) {
-                CashManager.addXYZtoCash(query, yAndZAns.getY(), yAndZAns.getZ());
+            if (yAndZAns.getZ() > CacheManager.minZ) {
+                CacheManager.addXYZtoCash(query, yAndZAns.getY(), yAndZAns.getZ());
             }
             return ans;
 

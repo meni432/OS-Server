@@ -24,7 +24,7 @@ public class Server {
     public static final int TIME_TO_WAIT = 1000; // time to wait for read object until interrupt him
 
     public static final int S_THREADS_NUM = 5; //1. S - number of allowed S-threads.
-    public static final int CASH_SIZE = 100; //C - size of the cache.
+    public static final int CACHE_SIZE = 100; //C - size of the cache.
     public static final int LEAST_TO_CACHE = 10;//3. M - the least number of times a query has to be requested in order to be allowed to enter the cache.
     public static final int RANDOM_RANGE = 2; //4. L - to specify the range [1, L] from which missing replies will be drawn uniformly at random.
     public static final int NUMBER_OF_READER_THREADS = 7; //5. Y - number of reader threads.
@@ -50,7 +50,7 @@ public class Server {
             @Override
             public void run() {
                 while (true) {
-                    CashManager.updateCash();
+                    CacheManager.updateCache();
                     System.err.println("------------update cash completed---------------");
                 }
             }
