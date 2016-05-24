@@ -1,9 +1,6 @@
 package ServerPack;
 
-<<<<<<< HEAD
 
-=======
->>>>>>> refs/remotes/origin/up-change
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -17,7 +14,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * 
+ * @author Meni Samet
  */
 public final class DatabaseManager {
      /* a temporary structure to hold the elements who needs to be write to the DB */
@@ -102,43 +99,25 @@ public final class DatabaseManager {
             }
         }
     }
-<<<<<<< HEAD
     /**
      * 
      * @param toPut trio XYZ to update z from cache to DB
      */
     public static void updateFromCash(XYZ toPut) {
-=======
-
-    /**
-     * Update database from cache
-     * @param toPut XYZ object to write in DB
-     */
-    public static void updateFromCache(XYZ toPut) {
->>>>>>> refs/remotes/origin/up-change
         try {
             readWriteLock.lockRead();
             elemToUpdateDB.put(toPut.getX(), toPut);
         } catch (InterruptedException ex) {
-            ex.printStackTrace();
+            Logger.getLogger(DatabaseManager.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
             readWriteLock.unlockRead();
         }
     }
-<<<<<<< HEAD
 /**
  * search query x in the DB 
  * @param query x 
  * @return y answer
  */
-=======
-
-    /**
-     * Read Y from DB
-     * @param query query to search in DB
-     * @return y answer for query
-     */
->>>>>>> refs/remotes/origin/up-change
     public static int readY(int query) {
 
         try {
@@ -180,11 +159,7 @@ public final class DatabaseManager {
             readWriteLock.unlockRead();
         }   
     }
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> refs/remotes/origin/up-change
 
     /**
      *  write trio (x,y,z) to the DB files
@@ -250,21 +225,12 @@ public final class DatabaseManager {
             }
         }
     }
-<<<<<<< HEAD
     /**
      * write all the elements from elemToUpdateDB to the DB
  
      */
     public static void updateDB() {
-=======
-
-    /**
-     * write all toWrite element in Database
-     */
-    public static void writeAll() {
->>>>>>> refs/remotes/origin/up-change
         try {
-            // Check if this is the time to update, if not time, wait
             long diffTime = System.currentTimeMillis() - LastUpdate;
             // Check if this is the time to update, if not , wait
             while (elemToUpdateDB.size() < UPDATE_DB_REACHED && diffTime < TIME_TO_UPDATE_MS) {
@@ -293,25 +259,6 @@ public final class DatabaseManager {
         }
     }
 
-<<<<<<< HEAD
-=======
-    /**
-     * set new value for given x
-     *
-     * @param x the request value
-     * @param z new value for z in (x,y,z)
-     */
-    public static void writeZ(int x, int z) throws IOException {
-        String fileName = getFileName(x);
-        RandomAccessFile raf = new RandomAccessFile(fileName, "rw");
-
-        int position = getPosition(x);
-        raf.seek(position + Integer.BYTES);
-        raf.writeInt(z);
-
-        raf.close();
-    }
->>>>>>> refs/remotes/origin/up-change
 
     /**
      * only for test DB files
