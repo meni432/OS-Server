@@ -6,12 +6,11 @@ package ServerPack;
  * and open the template in the editor.
  */
 import java.io.IOException;
-import java.util.concurrent.Semaphore;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- *
+ * s-Runnable-Task to search in the cache/DB  
  * @author ofir Arnon
  */
 public class SearchRunable implements Runnable {
@@ -39,7 +38,7 @@ public class SearchRunable implements Runnable {
             this.cashAns = cacheReaderRunnable.getAns(); // wait until get ans
             if (this.cashAns != DatabaseManager.NOT_FOUND) { // check if found on cash
                 ois.getOos().writeObject(this.cashAns); // send the answare to the client
-                System.err.println("cash answer x=" + query + " y=" + this.cashAns);
+                System.out.println("cash answer x=" + query + " y=" + this.cashAns);
             } else { // if not found in cash, search in database
                 // create new database search reader and execute him to thread pool
                 DBreaderRunnable dBreaderRunnable = new DBreaderRunnable(query);

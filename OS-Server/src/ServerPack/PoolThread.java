@@ -3,10 +3,13 @@ package ServerPack;
 
 
 import java.util.concurrent.locks.ReentrantLock;
-
+/**
+ * represent a thread in a threadPool 
+ * @author ofir Arnon
+ */
 public class PoolThread extends Thread {
 
-    private BlockingQueue taskQueue = null;
+    private BlockingQueue taskQueue;
     private boolean isStopped = false;
 
     private final ReentrantLock lock = new ReentrantLock(true);
@@ -18,7 +21,7 @@ public class PoolThread extends Thread {
     public void run() {
         while (!isStopped()) {
             try {
-                Runnable runnable = (Runnable) taskQueue.dequeue();
+                Runnable runnable = (Runnable) taskQueue.dequeue();// dequeue runnble task
                 runnable.run();
             } catch (InterruptedException e) {}
             

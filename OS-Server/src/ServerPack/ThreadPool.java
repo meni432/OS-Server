@@ -8,8 +8,8 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class ThreadPool {
 
-    private BlockingQueue taskQueue = null;
-    private List<PoolThread> threads = new ArrayList<>();
+    private BlockingQueue taskQueue;
+    private final List<PoolThread> threads;
     private boolean isStopped = false;
 
     private final ReentrantLock lock = new ReentrantLock(true);
@@ -19,6 +19,7 @@ public class ThreadPool {
      * @param noOfThreads  number of thread to create in this thread pool
      */
     public ThreadPool(int noOfThreads) {
+        this.threads = new ArrayList<>();
         taskQueue = new BlockingQueue();
 
         for (int i = 0; i < noOfThreads; i++) {
@@ -35,6 +36,7 @@ public class ThreadPool {
      * @param familyName 
      */
     public ThreadPool(int noOfThreads, String familyName) {
+        this.threads = new ArrayList<>();
         taskQueue = new BlockingQueue();
 
         for (int i = 0; i < noOfThreads; i++) {

@@ -8,8 +8,8 @@ package ServerPack;
 import java.util.concurrent.Semaphore;
 
 /**
- *
- * @author ofir Arnon
+ * DataBase Reader Runnable class
+ * this class is a Task to search in DataBase
  */
 public class DBreaderRunnable implements Runnable{
 
@@ -26,11 +26,11 @@ public class DBreaderRunnable implements Runnable{
      @Override
     public void run() {
         ans = DatabaseManager.readY(qurey);
-        semDoneReading.release();       
+        semDoneReading.release(); //release get Ans method      
     }
     
     public int getAns() throws InterruptedException{
-        semDoneReading.acquire();
+        semDoneReading.acquire();// wait for answer from the DataBase
         return ans;
     }
 

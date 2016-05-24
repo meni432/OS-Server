@@ -13,10 +13,9 @@ class XYZ {
     private int y;
     private int z;
 
-    public XYZ() {
+    public XYZ() { }
 
-    }
-
+    
     public XYZ(int x, int y, int z) {
         this.x = x;
         this.y = y;
@@ -45,39 +44,8 @@ class XYZ {
         this.y = y;
     }
 
-    /**
-     * get z synchronize function with read lock (more then one threads can read
-     * z)
-     *
-     * @return z value
-     */
     public int getZ() {
-//        try {
-//            lock.lockRead();
             return z;
-//        } catch (InterruptedException ex) {
-//            ex.printStackTrace();
-//        } finally {
-//            lock.unlockRead();
-//        }
-//
-//        return LockError;
-    }
-
-    /**
-     * not for use currently!!!!!
-     *
-     * @param z
-     */
-    private void setZ(int z) {
-        try {
-            lock.lockWrite();
-            this.z = z;
-        } catch (InterruptedException ex) {
-            ex.printStackTrace();
-        } finally {
-            lock.unlockWrite();
-        }
     }
 
     /**
@@ -96,6 +64,9 @@ class XYZ {
 
     public void setOverWriteZ(boolean overWriteZ) {
         this.overWriteZ = overWriteZ;
+    }
+        public boolean isOverWriteZ() {
+        return overWriteZ;
     }
 
 }

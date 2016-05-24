@@ -1,10 +1,8 @@
 package ServerPack;
 
 import java.util.ArrayList;
-import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
 
 /**
  *
@@ -12,7 +10,7 @@ import java.util.logging.Logger;
  */
 public class SyncArrayList<T> {
 
-    private ArrayList<T> array = new ArrayList<>();
+    private final ArrayList<T> array = new ArrayList<>();
     private final ReentrantLock lock = new ReentrantLock(true);
 
     /**

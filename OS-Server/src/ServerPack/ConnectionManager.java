@@ -7,37 +7,41 @@ package ServerPack;
  */
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
-
+/**
+ * manage the client-server connection, 
+ * @author ofir Arnon
+ */
 public class ConnectionManager implements Runnable {
-// TODO change in the client to ObjectInputStream
 
-    ServerSocket socketS;
-    SyncArrayList<InOutStreams> streamList;
+    ServerSocket serverSocket;
+    SyncArrayList<InOutStreams> streamList; //structure that holds inOutStream for each client connection
     int currentStream = 0;
-    ReentrantLock lock;
-
-    public ConnectionManager(ServerSocket socketS, SyncArrayList<InOutStreams> streamList, ReentrantLock lock) {
-        this.socketS = socketS;
+    ReentrantLock lock; // synchronizing between iterate the streamList(ReaquestMonitor class), and adding inOutStream to the streamList
+    /**
+     * 
+     * @param serverSocket socket server
+     * @param streamList structure that holds inOutStream for each client connection
+     * @param lock  synchronizing between iterate the streamList(ReaquestMonitor class), and adding inOutStream to the streamList
+     */
+    public ConnectionManager(ServerSocket serverSocket, SyncArrayList<InOutStreams> streamList, ReentrantLock lock) {
+        this.serverSocket = serverSocket;
         this.streamList = streamList;
         this.lock = lock;
     }
 
+   /**
+    * creates socket for each client connection, and add it to the streamList
+    */
     @Override
     public void run() {
         Thread.currentThread().setName("ConnectionManager");
-        /// why do we need lock????
         while (true) {
             try {
-                Socket s = socketS.accept();
+                Socket s = serverSocket.accept(); 
                 lock.lock();
-                System.out.println("connection accept");
                 try {
                     streamList.add(new InOutStreams(s));
-                    System.out.println("connection add");
                 } finally {
                     lock.unlock();
                 }
@@ -47,9 +51,4 @@ public class ConnectionManager implements Runnable {
             }
         }
     }
-
-    public SyncArrayList<InOutStreams> getStreamList() {
-        return streamList;
-    }
-
 }

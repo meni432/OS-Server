@@ -1,10 +1,6 @@
 package ServerPack;
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
+
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -21,22 +17,28 @@ import java.util.logging.Logger;
  * @author Meni Samet
  */
 public final class DatabaseManager {
-
-    final static int FILE_MAX_CAPACITY = 100;
-    final static int UPDATE_DB_REACHED = 100;
-    final static int OBJECT_SIZE = Integer.BYTES * 3;
-    final static int NOT_FOUND = -1;
-    final static int INITIAL_VALUE = 1;
+     /* a temporary structure to hold the elements who needs to be write to the DB */
+    private static final HashMap<Integer, XYZ> elemToUpdateDB = new HashMap<>();
+    final static int FILE_MAX_CAPACITY = 100; // FILE_MAX_CAPACITY (x,y,z) trio on each file
+    final static int UPDATE_DB_REACHED = 100; // UPDATE_DB_REACHED 
+    final static int OBJECT_SIZE = Integer.BYTES * 3; // trio (x,y,z) size in bytes
+    final static int NOT_FOUND = -1; // indicate that the trio not found
+    final static int INITIAL_VALUE = 1; // z initial value
+    /* when last update time minus current time bigger than TIME_TO_UPDATE_MS writer DB thread start update */    
     private static final int TIME_TO_UPDATE_MS = 5000;
+     /* readWriteLock to synchronize between DB read-write action */   
     private static final ReadWriteLock readWriteLock = new ReadWriteLock();
+     /* semaphore that holds the writer DB thread until TIME_TO_UPDATE_MS or UPDATE_DB_REACHED reached */
     private static final Semaphore semUpdateDB = new Semaphore(0);
-
+    /* holds the last update DB time */    
     private static long LastUpdate = System.currentTimeMillis();
 
-    private static HashMap<Integer, XYZ> toWrite = new HashMap<>();
-
+    
+    /**
+     * singleton design pattern 
+     */
     private DatabaseManager() {
-    } // SingleTone desgin Pattern
+    } 
 
     /**
      * generate file name for DB
@@ -97,110 +99,75 @@ public final class DatabaseManager {
             }
         }
     }
-
+    /**
+     * 
+     * @param toPut trio XYZ to update z from cache to DB
+     */
     public static void updateFromCash(XYZ toPut) {
         try {
             readWriteLock.lockRead();
-            toWrite.put(toPut.getX(), toPut);
+            elemToUpdateDB.put(toPut.getX(), toPut);
         } catch (InterruptedException ex) {
             Logger.getLogger(DatabaseManager.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
             readWriteLock.unlockRead();
         }
     }
-
+/**
+ * search query x in the DB 
+ * @param query x 
+ * @return y answer
+ */
     public static int readY(int query) {
 
         try {
             readWriteLock.lockRead();
 
             int ans;
-            XYZ yAndZAns;
-            if ((yAndZAns = toWrite.get(query)) != null) {
-                yAndZAns.incZ();
-                ans = yAndZAns.getY(); // ofir added this line because we need the ans from the hashTable(ans=-1 if it's not in the DB) 
-            } else {
-                yAndZAns = readDBHelper(query);
-                ans = yAndZAns.getY();
+            XYZ trio;
+            if ((trio = elemToUpdateDB.get(query)) != null) { // if the trio founds in the elemToUpdateDB temporay structure
+                trio.incZ();
+                ans = trio.getY(); 
+            } else { // search in the DB files
+                trio = readDBHelper(query);
+                ans = trio.getY();
 
                 XYZ toUpdate = new XYZ();
-                if (ans != NOT_FOUND) {
+                if (ans != NOT_FOUND) { // if the trio in the DB
                     toUpdate.setY(ans);
-                } else {
+                } else { // create random y for query x
                     ans = (int) (Math.random() * Server.RANDOM_RANGE) + 1;
                     toUpdate.setY(ans);
                 }
                 toUpdate.incZ();
-                toWrite.put(query, toUpdate);
+                elemToUpdateDB.put(query, toUpdate); // put toUpdate in the temporary structure
             }
-            // cehck for cash update
+            
             long diffTime = System.currentTimeMillis() - LastUpdate;
-            if (toWrite.size() >= UPDATE_DB_REACHED || diffTime > TIME_TO_UPDATE_MS) {
+            if (elemToUpdateDB.size() >= UPDATE_DB_REACHED || diffTime > TIME_TO_UPDATE_MS) { // invoke DB writer Thread
                 semUpdateDB.release();
             }
-            if (yAndZAns.getZ() > CacheManager.minZ) {
-                CacheManager.addXYZtoCash(query, yAndZAns.getY(), yAndZAns.getZ());
+            if (trio.getZ() > CacheManager.minZ) { // add the trio to the cathe
+                CacheManager.addXYZtoCash(query, trio.getY(), trio.getZ());
             }
             return ans;
 
         } catch (InterruptedException ex) {
             ex.printStackTrace();
+             return NOT_FOUND;
         } finally {
             readWriteLock.unlockRead();
-        }
-
-        return NOT_FOUND;
+        }   
     }
-//    public static int readY(int query) {
-//
-//        try {
-//            readWriteLock.lockRead();
-//            XYZ yAndZ = readDBHelper(query);
-//            if (yAndZ.getZ() > CashManager.minZ) {
-//                CashManager.addXYZtoCash(query, yAndZ.getY(), yAndZ.getZ());
-//            }
-//            int ans = yAndZ.getY();
-//            XYZ temp;
-//            if ((temp = toWrite.get(query)) != null) {
-//                temp.incZ();
-//                ans = temp.getY(); // ofir added this line because we need the ans from the hashTable(ans=-1 if it's not in the DB) 
-//            } else if (ans != NOT_FOUND) {
-//                temp = new XYZ();
-//                temp.setY(ans); 
-//                temp.incZ();
-//                toWrite.put(query, temp);
-//            } else {
-//                temp = new XYZ();
-//                ans  = (int) (Math.random() * Server.RANDOM_RANGE) + 1;
-//                temp.setY(ans);
-//                temp.incZ();
-//                toWrite.put(query, temp);
-//            }
-//            long diffTime = System.currentTimeMillis() - LastUpdate;
-//            if (toWrite.size() >= UPDATE_DB_REACHED || diffTime > TIME_TO_UPDATE_MS) {
-//                System.out.println("release update");
-//                semUpdateDB.release();
-//            }
-//            return ans;
-//        } catch (InterruptedException ex) {
-//            Logger.getLogger(DatabaseManager.class.getName()).log(Level.SEVERE, null, ex);
-//        } finally {
-//            readWriteLock.unlockRead();
-//        }
-//
-//        return NOT_FOUND;
-//    }
+
 
     /**
-     * write new (x,y,1)
-     *
-     * @param x the request value
-     * @param y
-     * @throws java.io.IOException
-     * @throws java.lang.InterruptedException
+     *  write trio (x,y,z) to the DB files
+     * @param x query
+     * @param y answer
+     * @param incZ increment z in the given incZ
      */
-    // TODO check change in raf
-    private static void writeXYZ(int x, int y, int incZ) {
+    private static void writeXYincZ(int x, int y, int incZ) {
         RandomAccessFile raf = null;
         try {
             String fileName = getFileName(x);
@@ -231,8 +198,8 @@ public final class DatabaseManager {
      * write / update new (x, y, newZ)
      *
      * @param x the request value
-     * @param y
-     * @param newZ
+     * @param y answer
+     * @param newZ 
      */
     private static void writeXYOvverideZ(int x, int y, int newZ) {
         RandomAccessFile raf = null;
@@ -258,24 +225,31 @@ public final class DatabaseManager {
             }
         }
     }
-
-    public static void writeAll() {
+    /**
+     * write all the elements from elemToUpdateDB to the DB
+ 
+     */
+    public static void updateDB() {
         try {
             long diffTime = System.currentTimeMillis() - LastUpdate;
-            while (toWrite.size() < UPDATE_DB_REACHED && diffTime < TIME_TO_UPDATE_MS) {
+            // Check if this is the time to update, if not , wait
+            while (elemToUpdateDB.size() < UPDATE_DB_REACHED && diffTime < TIME_TO_UPDATE_MS) {
                 semUpdateDB.acquire();
                 diffTime = System.currentTimeMillis() - LastUpdate;
             }
-            System.out.println("after acquire");
             readWriteLock.lockWrite();
             try {
-                Set<Entry<Integer, XYZ>> set = toWrite.entrySet();
+                Set<Entry<Integer, XYZ>> set = elemToUpdateDB.entrySet();
                 Iterator<Entry<Integer, XYZ>> itr = set.iterator();
                 while (itr.hasNext()) {
                     Entry<Integer, XYZ> elm = (Entry<Integer, XYZ>) itr.next();
-                    writeXYZ(elm.getKey(), elm.getValue().getY(), elm.getValue().getZ());
+                    if (elm.getValue().isOverWriteZ()) { // if the element came from the cache, overwrite z
+                        writeXYOvverideZ(elm.getKey(), elm.getValue().getY(), elm.getValue().getZ());
+                    } else { // inc z
+                        writeXYincZ(elm.getKey(), elm.getValue().getY(), elm.getValue().getZ());
+                    }
                 }
-                toWrite.clear();
+                elemToUpdateDB.clear();
                 LastUpdate = System.currentTimeMillis();
             } finally {
                 readWriteLock.unlockWrite();
@@ -285,32 +259,9 @@ public final class DatabaseManager {
         }
     }
 
-    /**
-     * increase z value for given x and toInc (x,y,z+toInc)
-     *
-     * @param x the request value
-     * @param toInc value to amount z ( z = z + toInc )
-     * @throws IOException
-     */
-    /**
-     * set new value for given x
-     *
-     * @param x the request value
-     * @param z new value for z in (x,y,z)
-     */
-    public static void writeZ(int x, int z) throws IOException {
-        String fileName = getFileName(x);
-        RandomAccessFile raf = new RandomAccessFile(fileName, "rw");
-
-        int position = getPosition(x);
-        raf.seek(position + Integer.BYTES);
-        raf.writeInt(z);
-
-        raf.close();
-    }
 
     /**
-     * only for test
+     * only for test DB files
      */
     public static void main(String[] args) {
         try {
