@@ -85,7 +85,7 @@ public class CacheManager {
                     try {
                         XYZ UpdateCash = new XYZ(values.get(i).getX(), values.get(i).getY(), values.get(i).getZ());
                         UpdateCash.setOverWriteZ(true);
-                        DatabaseManager.updateFromCash(UpdateCash);
+                        DatabaseManager.updateFromCache(UpdateCash);
                         // update values.get(i)
                         cache.remove(values.get(i).getX());
                     } catch (IndexOutOfBoundsException ex) {

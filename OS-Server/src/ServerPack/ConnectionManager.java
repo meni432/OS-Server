@@ -1,10 +1,5 @@
 package ServerPack;
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -12,6 +7,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
+/**
+ * Connection Manager Class.
+ * This is a Runnable class that alway listen for new client connection,
+ * and after connection add him to ArryaList
+ */
 public class ConnectionManager implements Runnable {
 // TODO change in the client to ObjectInputStream
 

@@ -1,10 +1,5 @@
 package ServerPack;
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -18,7 +13,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * @author Meni Samet
+ * 
  */
 public final class DatabaseManager {
 
@@ -98,17 +93,26 @@ public final class DatabaseManager {
         }
     }
 
-    public static void updateFromCash(XYZ toPut) {
+    /**
+     * Update database from cache
+     * @param toPut XYZ object to write in DB
+     */
+    public static void updateFromCache(XYZ toPut) {
         try {
             readWriteLock.lockRead();
             toWrite.put(toPut.getX(), toPut);
         } catch (InterruptedException ex) {
-            Logger.getLogger(DatabaseManager.class.getName()).log(Level.SEVERE, null, ex);
+            ex.printStackTrace();
         } finally {
             readWriteLock.unlockRead();
         }
     }
 
+    /**
+     * Read Y from DB
+     * @param query query to search in DB
+     * @return y answer for query
+     */
     public static int readY(int query) {
 
         try {
@@ -151,45 +155,7 @@ public final class DatabaseManager {
 
         return NOT_FOUND;
     }
-//    public static int readY(int query) {
-//
-//        try {
-//            readWriteLock.lockRead();
-//            XYZ yAndZ = readDBHelper(query);
-//            if (yAndZ.getZ() > CashManager.minZ) {
-//                CashManager.addXYZtoCash(query, yAndZ.getY(), yAndZ.getZ());
-//            }
-//            int ans = yAndZ.getY();
-//            XYZ temp;
-//            if ((temp = toWrite.get(query)) != null) {
-//                temp.incZ();
-//                ans = temp.getY(); // ofir added this line because we need the ans from the hashTable(ans=-1 if it's not in the DB) 
-//            } else if (ans != NOT_FOUND) {
-//                temp = new XYZ();
-//                temp.setY(ans); 
-//                temp.incZ();
-//                toWrite.put(query, temp);
-//            } else {
-//                temp = new XYZ();
-//                ans  = (int) (Math.random() * Server.RANDOM_RANGE) + 1;
-//                temp.setY(ans);
-//                temp.incZ();
-//                toWrite.put(query, temp);
-//            }
-//            long diffTime = System.currentTimeMillis() - LastUpdate;
-//            if (toWrite.size() >= UPDATE_DB_REACHED || diffTime > TIME_TO_UPDATE_MS) {
-//                System.out.println("release update");
-//                semUpdateDB.release();
-//            }
-//            return ans;
-//        } catch (InterruptedException ex) {
-//            Logger.getLogger(DatabaseManager.class.getName()).log(Level.SEVERE, null, ex);
-//        } finally {
-//            readWriteLock.unlockRead();
-//        }
-//
-//        return NOT_FOUND;
-//    }
+    
 
     /**
      * write new (x,y,1)
@@ -259,8 +225,12 @@ public final class DatabaseManager {
         }
     }
 
+    /**
+     * write all toWrite element in Database
+     */
     public static void writeAll() {
         try {
+            // Check if this is the time to update, if not time, wait
             long diffTime = System.currentTimeMillis() - LastUpdate;
             while (toWrite.size() < UPDATE_DB_REACHED && diffTime < TIME_TO_UPDATE_MS) {
                 semUpdateDB.acquire();
@@ -285,13 +255,6 @@ public final class DatabaseManager {
         }
     }
 
-    /**
-     * increase z value for given x and toInc (x,y,z+toInc)
-     *
-     * @param x the request value
-     * @param toInc value to amount z ( z = z + toInc )
-     * @throws IOException
-     */
     /**
      * set new value for given x
      *
