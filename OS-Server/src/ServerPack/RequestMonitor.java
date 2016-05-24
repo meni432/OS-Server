@@ -39,9 +39,8 @@ public class RequestMonitor extends Thread {
         while (true) {
             try {
                 lock.lock();
-                int[] i = {0};
-                for (i[0] = 0; i[0] < streamList.size(); i[0]++) {
-                    InOutStreams currentStream = streamList.get(i[0]);
+                for (int i= 0; i < streamList.size(); i++) {
+                    InOutStreams currentStream = streamList.get(i);
                     executeRead = false;
 //                    ScheduleableRunnable readObjectRunnable = new ScheduleableRunnable() {
 //
@@ -115,12 +114,22 @@ public class RequestMonitor extends Thread {
                         SearchRunable task = new SearchRunable(currentStream, query, cashReadersPool, dBreadersPool);
                         seachersThreadPool.execute(task);
                     } catch (IOException ex) {
-                        ex.printStackTrace();
+                        try {
+                            ex.printStackTrace();
+                            currentStream.getOis().close();
+                            currentStream.getOos().close();
+                            currentStream.getSocket().close();
+                        }
+                        catch (IOException ex1) {
+                            ex1.printStackTrace();
+                        }
+                        finally{
+                            streamList.remove(i);
+                            i--;
+                        }
+
                     }
 
-//                    if (executeRead == false) {
-//                        readThread.interrupt();
-//                    }
                 }
             } finally {
 
@@ -129,60 +138,4 @@ public class RequestMonitor extends Thread {
             }
         }
     }
-}
-
-class ScheduleThread extends Thread {
-
-    class ScheduleTask {
-
-        private long time;
-        private Scheduleable scheduleable;
-
-        public ScheduleTask(long time, Scheduleable scheduleable) {
-            this.time = time;
-            this.scheduleable = scheduleable;
-        }
-    }
-
-    BlockingQueue tasks = new BlockingQueue();
-    ReadWriteLock lock = new ReadWriteLock();
-
-    public void addTask(long time, Scheduleable scheduleable) throws InterruptedException {
-        long currentTime = System.currentTimeMillis();
-        tasks.enqueue(new ScheduleTask(currentTime + time, scheduleable));
-    }
-
-    public ScheduleThread() {
-        super("ScheduleThread");
-    }
-
-    @Override
-    public void run() {
-        while (true) {
-            try {
-                ScheduleTask task = (ScheduleTask) tasks.dequeue();
-                long currentTime = System.currentTimeMillis();
-                if (task.time - currentTime < 0) {
-                    task.scheduleable.timeOver();
-                } else {
-                    tasks.enqueue(task);
-                }
-                Thread.sleep(10);
-            } catch (InterruptedException ex) {
-                ex.printStackTrace();
-            }
-        }
-    }
-
-}
-
-interface Scheduleable {
-
-    public void timeOver();
-
-    public void isFinish();
-}
-
-abstract class ScheduleableRunnable implements Scheduleable, Runnable {
-
 }
