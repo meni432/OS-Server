@@ -37,15 +37,25 @@ public class SearchRunable implements Runnable {
             cashReadersPool.execute(cacheReaderRunnable);
             this.cashAns = cacheReaderRunnable.getAns(); // wait until get ans
             if (this.cashAns != DatabaseManager.NOT_FOUND) { // check if found on cash
+<<<<<<< HEAD
                 ois.getOos().writeObject(this.cashAns); // send the answare to the client
                 System.out.println("cash answer x=" + query + " y=" + this.cashAns);
+=======
+//                ois.getOos().writeObject(this.cashAns); // send the answare to the client
+                   ois.writeInteger(this.cashAns);
+                System.out.println("cash answer x=" + query + " y=" + this.cashAns);
+//                System.out.println((char)27 + "[34m" +"cash answer x=" + query + " y=" + this.cashAns+ (char)27 + "[0m");
+>>>>>>> refs/remotes/origin/up-change
             } else { // if not found in cash, search in database
                 // create new database search reader and execute him to thread pool
                 DBreaderRunnable dBreaderRunnable = new DBreaderRunnable(query);
                 dBreadersPool.execute(dBreaderRunnable);
                 this.databaseAnswer = dBreaderRunnable.getAns(); // wait until get ans
-                ois.getOos().writeObject(this.databaseAnswer); // send the answare to the client
+//                ois.getOos().writeObject(); // send the answare to the client
+                ois.writeInteger(this.databaseAnswer);
                 System.out.println("Db answer x=" + query + " y=" + this.databaseAnswer);
+//                System.out.println((char)27 + "[32m" +"Db answer x=" + query + " y=" + this.databaseAnswer+ (char)27 + "[0m");
+
             }
 
         } catch (IOException ex) {

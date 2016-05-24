@@ -15,7 +15,8 @@ public class SyncArrayList<T> {
 
     /**
      * add element to array
-     * @param data 
+     *
+     * @param data
      */
     public void add(T data) {
         lock.lock();
@@ -28,6 +29,7 @@ public class SyncArrayList<T> {
 
     /**
      * get element from array
+     *
      * @param index index of element in array
      * @return T object at index
      */
@@ -42,6 +44,7 @@ public class SyncArrayList<T> {
 
     /**
      * remove element in given index
+     *
      * @param index index of element to remove
      * @return the object T that remove
      */
@@ -53,11 +56,25 @@ public class SyncArrayList<T> {
             lock.unlock();
         }
     }
-    
+
+    /**
+     * remove element that send
+     * @param element element T
+     * @return true if remove, else false
+     */
+    public boolean remove(T element) {
+        lock.lock();
+        try {
+            return array.remove(element);
+        } finally {
+            lock.unlock();
+        }
+    }
+
     /**
      * @return size of array (number of elements)
      */
-    public int size(){
+    public int size() {
         lock.lock();
         try {
             return array.size();
@@ -65,7 +82,5 @@ public class SyncArrayList<T> {
             lock.unlock();
         }
     }
-
- 
 
 }

@@ -1,15 +1,15 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package ServerPack;
 
 import java.util.concurrent.Semaphore;
 
 /**
+<<<<<<< HEAD
  * DataBase Reader Runnable class
  * this class is a Task to search in DataBase
+=======
+ * DB reader Runnable class
+ *  this class is a Task to search in DB
+>>>>>>> refs/remotes/origin/up-change
  */
 public class DBreaderRunnable implements Runnable{
 
@@ -26,11 +26,19 @@ public class DBreaderRunnable implements Runnable{
      @Override
     public void run() {
         ans = DatabaseManager.readY(qurey);
+<<<<<<< HEAD
         semDoneReading.release(); //release get Ans method      
     }
     
     public int getAns() throws InterruptedException{
         semDoneReading.acquire();// wait for answer from the DataBase
+=======
+        semDoneReading.release(); // release getAns function
+    }
+    
+    public int getAns() throws InterruptedException{
+        semDoneReading.acquire(); // wait until finish reading
+>>>>>>> refs/remotes/origin/up-change
         return ans;
     }
 

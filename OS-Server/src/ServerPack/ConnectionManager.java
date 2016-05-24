@@ -1,16 +1,19 @@
 package ServerPack;
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.locks.ReentrantLock;
+<<<<<<< HEAD
 /**
  * manage the client-server connection, 
  * @author ofir Arnon
+=======
+
+/**
+ * Connection Manager Class.
+ * This is a Runnable class that alway listen for new client connection,
+ * and after connection add him to ArryaList
+>>>>>>> refs/remotes/origin/up-change
  */
 public class ConnectionManager implements Runnable {
 

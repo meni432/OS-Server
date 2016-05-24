@@ -94,8 +94,14 @@ public class CacheManager {
                 for (int i = 0; i < elemToUpdateCache.size(); i++) {  // removing the amount of elemToUpdateCache    
                     try {
                         XYZ UpdateCash = new XYZ(values.get(i).getX(), values.get(i).getY(), values.get(i).getZ());
+<<<<<<< HEAD
                         UpdateCash.setOverWriteZ(true); // when you update th DB dont inc Z , over write him
                         DatabaseManager.updateFromCash(UpdateCash);// when the elements removed from the cache update DB
+=======
+                        UpdateCash.setOverWriteZ(true);
+                        DatabaseManager.updateFromCache(UpdateCash);
+                        // update values.get(i)
+>>>>>>> refs/remotes/origin/up-change
                         cache.remove(values.get(i).getX());
                     } catch (IndexOutOfBoundsException ex) {
                         break;
