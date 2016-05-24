@@ -21,7 +21,6 @@ public class RequestMonitor extends Thread {
     private final ThreadPool cashReadersPool;
     private final ReentrantLock lock;
     private boolean executeRead = false;
-    private ScheduleThread scheduleThread = new ScheduleThread();
     private ThreadPool readerThreadPool = new ThreadPool(1);
 
     public RequestMonitor(SyncArrayList<InOutStreams> streamList, ThreadPool seachersThreadPool, ThreadPool cashReadersPool, ThreadPool dBreadersPool, ReentrantLock lock) {
