@@ -22,41 +22,31 @@ public class SearchRunable implements Runnable {
     private final ThreadPool cashReadersPool;
     private int cashAns = DatabaseManager.NOT_FOUND;
     private int databaseAnswer = DatabaseManager.NOT_FOUND;
-    private final Semaphore semDoneReading;
 
     public SearchRunable(InOutStreams ois, int query, ThreadPool cashReaderPool, ThreadPool dBreadersPool) {
         this.ois = ois;
         this.query = query;
         this.dBreadersPool = dBreadersPool;
         this.cashReadersPool = cashReaderPool;
-        this.semDoneReading = new Semaphore(0);
     }
 
     @Override
     public void run() {
 
         try {
-
-            // create new cash serach reader and execute him to thread pool
-            cashReadersPool.execute(new CashReaderRunnable(this, semDoneReading, query));
-            // wating to cash reader to done reading.
-            semDoneReading.acquire();
-            // check if found on cash
-            if (this.cashAns != DatabaseManager.NOT_FOUND) {
-//                Thread.sleep(20);
-                // send the answare to the client
-                ois.getOos().writeObject(this.cashAns);
+            CacheReaderRunnable cacheReaderRunnable = new CacheReaderRunnable(query);
+            cashReadersPool.execute(cacheReaderRunnable);
+            this.cashAns = cacheReaderRunnable.getAns(); // wait until get ans
+            if (this.cashAns != DatabaseManager.NOT_FOUND) { // check if found on cash
+                ois.getOos().writeObject(this.cashAns); // send the answare to the client
                 System.err.println("cash answer x=" + query + " y=" + this.cashAns);
             } else { // if not found in cash, search in database
                 // create new database search reader and execute him to thread pool
-                dBreadersPool.execute(new DBreaderRunnable(this, semDoneReading, query));
-                // wating for DBreaderThread to done reading
-                semDoneReading.acquire();
-//                Thread.sleep(20);
-
-                // send the answare to the client
-                ois.getOos().writeObject(this.databaseAnswer);
-                    System.out.println("Db answer x=" + query + " y=" + this.databaseAnswer);
+                DBreaderRunnable dBreaderRunnable = new DBreaderRunnable(query);
+                dBreadersPool.execute(dBreaderRunnable);
+                this.databaseAnswer = dBreaderRunnable.getAns(); // wait until get ans
+                ois.getOos().writeObject(this.databaseAnswer); // send the answare to the client
+                System.out.println("Db answer x=" + query + " y=" + this.databaseAnswer);
             }
 
         } catch (IOException ex) {
@@ -74,22 +64,6 @@ public class SearchRunable implements Runnable {
         }
     }
 
-    /**
-     * get answer from cash (insert by the cash)
-     *
-     * @param y the answer
-     */
-    public void setCashAnswer(int y) {
-        this.cashAns = y;
-    }
 
-    /**
-     * get answer from database (insert by the database)
-     *
-     * @param y
-     */
-    public void setDatabaseAnswer(int y) {
-        this.databaseAnswer = y;
-    }
 
 }
