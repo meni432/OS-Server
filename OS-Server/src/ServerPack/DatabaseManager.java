@@ -75,7 +75,7 @@ public final class DatabaseManager {
             int read = raf.readInt();
             if (read == 0) {
                 if (x == 0) {
-                    raf.seek(Integer.BYTES);
+                    raf.seek(Integer.BYTES); //TODO i this this is a bug!!
                     return new XYZ(x, raf.readInt(), raf.readInt());
                 } else {
                     return new XYZ(x, NOT_FOUND, NOT_FOUND);
