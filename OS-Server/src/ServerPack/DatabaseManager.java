@@ -13,6 +13,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
+ * 
+ * Test atc 
  * Management the writing and reading from file
  */
 public final class DatabaseManager {
