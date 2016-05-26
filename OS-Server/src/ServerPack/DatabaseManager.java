@@ -14,24 +14,26 @@ import java.util.logging.Logger;
 
 /**
  * 
- * Test atc 
  * Management the writing and reading from file
  */
-public final class DatabaseManager {
+public  class DatabaseManager {
 
+    public static DatabaseManager _instance = new DatabaseManager();
+    
     /* a temporary structure to hold the elements who needs to be write to the DB */
     private static final HashMap<Integer, XYZ> elemToUpdateDB = new HashMap<>();
     final static int FILE_MAX_CAPACITY = 100; // FILE_MAX_CAPACITY (x,y,z) trio on each file
+    final static String PATCH_DB = "./DB-Files/";
     final static int UPDATE_DB_REACHED = 100; // UPDATE_DB_REACHED 
     final static int OBJECT_SIZE = Integer.BYTES * 3; // trio (x,y,z) size in bytes
     final static int NOT_FOUND = -1; // indicate that the trio not found
     final static int INITIAL_VALUE = 1; // z initial value
     /* when last update time minus current time bigger than TIME_TO_UPDATE_MS writer DB thread start update */
-    private static final int TIME_TO_UPDATE_MS = 5000;
+    private static final int TIME_TO_UPDATE_MS = 1000;
     /* readWriteLock to synchronize between DB read-write action */
-    private static final ReadWriteLock readWriteLock = new ReadWriteLock();
+    private  final ReadWriteLock readWriteLock = new ReadWriteLock();
     /* semaphore that holds the writer DB thread until TIME_TO_UPDATE_MS or UPDATE_DB_REACHED reached */
-    private static final Semaphore semUpdateDB = new Semaphore(0);
+    private  final Semaphore semUpdateDB = new Semaphore(0);
     /* holds the last update DB time */
     private static long LastUpdate = System.currentTimeMillis();
 
@@ -41,18 +43,22 @@ public final class DatabaseManager {
     private DatabaseManager() {
     }
 
+    public static DatabaseManager getInstance() {
+        return _instance;
+    }
+    
     /**
      * generate file name for DB
      *
      * @param x the request value
      * @return filename contain the result
      */
-    private static String getFileName(int x) {
+    private  String getFileName(int x) {
         if (x >= 0) { // in case that x is positive integer
-            return "" + (x / FILE_MAX_CAPACITY) * FILE_MAX_CAPACITY + ".db";
+            return PATCH_DB+"" + (x / FILE_MAX_CAPACITY) * FILE_MAX_CAPACITY + ".db";
         } else { // in case that x is negative integer, put in diffrent file
             x = Math.abs(x);
-            return "" + (x / FILE_MAX_CAPACITY) * FILE_MAX_CAPACITY + "-NEG.db";
+            return PATCH_DB+"" + (x / FILE_MAX_CAPACITY) * FILE_MAX_CAPACITY + "-NEG.db";
         }
     }
 
@@ -60,7 +66,7 @@ public final class DatabaseManager {
      * @param x the request value
      * @return position of the first byte
      */
-    private static int getPosition(int x) {
+    private  int getPosition(int x) {
         // in file, whenever x is negative or positive, mapping like is possitive
         x = Math.abs(x);
         return (x % (FILE_MAX_CAPACITY)) * OBJECT_SIZE;
@@ -73,7 +79,7 @@ public final class DatabaseManager {
      * @return y value
      * @throws IOException
      */
-    private static XYZ readDBHelper(int x) {
+    private  XYZ readDBHelper(int x) {
         RandomAccessFile raf = null;
         try {
             String fileName = getFileName(x);
@@ -112,7 +118,7 @@ public final class DatabaseManager {
      *
      * @param toPut trio XYZ to update z from cache to DB
      */
-    public static void updateFromCash(XYZ toPut) {
+    public  void updateFromCash(XYZ toPut) {
         try {
             readWriteLock.lockRead();
             elemToUpdateDB.put(toPut.getX(), toPut);
@@ -129,7 +135,7 @@ public final class DatabaseManager {
      * @param query x
      * @return y answer
      */
-    public static int readY(int query) {
+    public  int readY(int query) {
 
         try {
             readWriteLock.lockRead();
@@ -178,7 +184,7 @@ public final class DatabaseManager {
      * @param y answer
      * @param incZ increment z in the given incZ
      */
-    private static void writeXYincZ(int x, int y, int incZ) {
+    private  void writeXYincZ(int x, int y, int incZ) {
         RandomAccessFile raf = null;
         try {
             String fileName = getFileName(x);
@@ -212,7 +218,7 @@ public final class DatabaseManager {
      * @param y answer
      * @param newZ
      */
-    private static void writeXYOvverideZ(int x, int y, int newZ) {
+    private  void writeXYOvverideZ(int x, int y, int newZ) {
         RandomAccessFile raf = null;
         try {
             String fileName = getFileName(x);
@@ -241,7 +247,7 @@ public final class DatabaseManager {
      * write all the elements from elemToUpdateDB to the DB
      *
      */
-    public static void updateDB() {
+    public  void updateDB() {
         try {
             long diffTime = System.currentTimeMillis() - LastUpdate;
             // Check if this is the time to update, if not , wait
@@ -274,7 +280,7 @@ public final class DatabaseManager {
     /**
      * only for test DB files
      */
-    public static void main(String[] args) {
+    public  void main(String[] args) {
         try {
             // debug DB file
             String fileName = "3300.db";

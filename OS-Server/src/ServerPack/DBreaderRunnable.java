@@ -20,7 +20,7 @@ public class DBreaderRunnable implements Runnable{
     
      @Override
     public void run() {
-        ans = DatabaseManager.readY(qurey);
+        ans = DatabaseManager.getInstance().readY(qurey);
         semDoneReading.release(); //release get Ans method      
     }
     

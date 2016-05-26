@@ -1,55 +1,64 @@
 package ServerPack;
 
+import com.sun.javafx.scene.control.skin.VirtualFlow;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.concurrent.Semaphore;
-
 
 /**
  * This class manage the cash, the class provide static function to update, add
  * and search in cash
- *  
+ *
  */
 public class CacheManager {
- /* a temporary structure to hold the elements who needs to be write to the cache */
+
+    /* a temporary structure to hold the elements who needs to be write to the cache */
     private static final HashMap<Integer, XYZ> elemToUpdateCache = new HashMap<>();
- /* readWriteLock to synchronize between cache read/write action */   
+    /* readWriteLock to synchronize between cache read/write action */
     private static final ReadWriteLock readWriteLock = new ReadWriteLock();
- /* semaphore that holds the writer cache thread until TIME_TO_UPDATE_MS or UPDATE_CACHE_REACHED reached */
+    /* semaphore that holds the writer cache thread until TIME_TO_UPDATE_MS or UPDATE_CACHE_REACHED reached */
     private static final Semaphore semUpdateCache = new Semaphore(0);
- /* cache that holds query as a key, and XYZ as the value */   
+    /* cache that holds query as a key, and XYZ as the value */
     private static final HashMap<Integer, XYZ> cache = new HashMap<>();
- /* when elemToUpdateCache structure reach to this size, writer thread start updating the cache*/   
-    private static final int UPDATE_CACHE_REACHED = Server.CACHE_SIZE / 2;
-/* global minZ that holds the min value in the cathe, only elements bigger then him will enter the cache*/    
+    /* when elemToUpdateCache structure reach to this size, writer thread start updating the cache*/
+    private static final int UPDATE_CACHE_REACHED = Server.CACHE_SIZE / 3;
+    /* global minZ that holds the min value in the cathe, only elements bigger then him will enter the cache*/
     public static int minZ = Server.LEAST_TO_CACHE;
-/* when last update time minus current time bigger than TIME_TO_UPDATE_MS writer cash thread start update */    
+    /* when last update time minus current time bigger than TIME_TO_UPDATE_MS writer cash thread start update */
     private static final int TIME_TO_UPDATE_MS = 5000;
-/* holds the last update cache time */    
+    /* holds the last update cache time */
     private static long LastUpdate = System.currentTimeMillis();
 
-    /**
-     * singleton design pattern 
-     */
-     private CacheManager() {}
-     
+    private static PriorityQueue<XYZ> priorityQueue = new PriorityQueue<>(new Comparator<XYZ>() {
+        @Override
+        public int compare(XYZ o1, XYZ o2) {
+            return Integer.compare(o2.getZ(), o1.getZ());
+        }
+    });
 
     /**
-     * add element to cash
-     * if z bigger that global minZ
-     *the method put the element in the temp structure elemToUpdateCache
+     * singleton design pattern
+     */
+    private CacheManager() {
+    }
+
+    /**
+     * add element to cash if z bigger that global minZ the method put the
+     * element in the temp structure elemToUpdateCache
+     *
      * @param x query
      * @param y answer
      * @param z counting
      */
     public static void addXYZtoCash(int x, int y, int z) {
-
         try {
             readWriteLock.lockRead();
 
@@ -64,6 +73,22 @@ public class CacheManager {
             readWriteLock.unlockRead();
         }
     }
+    
+//       public static void addXYZtoCash(int x, int y, int z) {
+//        try {
+//            readWriteLock.lockRead();
+//
+//            if (z >= getMinZ()) {
+//                XYZ xYz = new XYZ(x, y, z);
+//                priorityQueue.add(xYz);//If the map previously contained a mapping for the key, the old value is replaced
+//            }
+//            
+//        } catch (InterruptedException ex) {
+//            ex.printStackTrace();
+//        } finally {
+//            readWriteLock.unlockRead();
+//        }
+//    }
 
     /**
      * start update operation, Deletes old elements, to create a place for a new
@@ -79,9 +104,11 @@ public class CacheManager {
             }
             readWriteLock.lockWrite(); // invoke write lock, reading is forbidden 
 
+            HashMap<Integer, XYZ> union = new HashMap<>();
             List<XYZ> values = new ArrayList<>(cache.values()); // create a list of all element currently in the cache
+            
+            
             Collections.sort(values, new Comparator<XYZ>() {    // sort the elements by Z value
-
                 @Override
                 public int compare(XYZ o1, XYZ o2) {
                     return Integer.compare(o1.getZ(), o2.getZ());
@@ -95,7 +122,7 @@ public class CacheManager {
                     try {
                         XYZ UpdateCash = new XYZ(values.get(i).getX(), values.get(i).getY(), values.get(i).getZ());
                         UpdateCash.setOverWriteZ(true); // when you update th DB dont inc Z , over write him
-                        DatabaseManager.updateFromCash(UpdateCash);// when the elements removed from the cache update DB
+                        DatabaseManager.getInstance().updateFromCash(UpdateCash);// when the elements removed from the cache update DB
                         cache.remove(values.get(i).getX());
                     } catch (IndexOutOfBoundsException ex) {
                         break;
@@ -116,9 +143,55 @@ public class CacheManager {
             readWriteLock.unlockWrite();
         }
     }
+//    public static void updateCache() {
+//        List<XYZ> union = new ArrayList<>();
+//        try {
+//            // Check if this is the time to update, if not, wait
+//            long diffTime = System.currentTimeMillis() - LastUpdate;
+//            while (elemToUpdateCache.size() < UPDATE_CACHE_REACHED && diffTime < TIME_TO_UPDATE_MS) {
+//                semUpdateCache.acquire();
+//                diffTime = System.currentTimeMillis() - LastUpdate;
+//            }
+//            readWriteLock.lockWrite(); // invoke write lock, reading is forbidden 
+//
+//            union.addAll(cache.values());
+//            union.add((XYZ) Arrays.asList(priorityQueue.toArray()));
+//            cache.clear();
+//            priorityQueue.clear();
+//            Collections.sort(union, new Comparator<XYZ>() {    // sort the elements by Z value but offside
+//                @Override
+//                public int compare(XYZ o1, XYZ o2) {
+//                    return Integer.compare(o2.getZ(), o1.getZ());
+//                }
+//            });
+//            for (int i = 0; i < Server.CACHE_SIZE && i < union.size(); i++) {
+//                XYZ current = union.get(i);
+//                cache.put(current.getX(), current);
+//            }
+//            minZ = union.get(union.size() - 1).getZ();
+//            for (int i = Server.CACHE_SIZE; i < union.size(); i++) {
+//                DatabaseManager.getInstance().updateFromCash(union.get(i));
+//            }
+//            union.clear();
+//            elemToUpdateCache.clear();
+//
+//            LastUpdate = System.currentTimeMillis();
+//        } catch (InterruptedException ex) {
+//        } finally {
+//            readWriteLock.unlockWrite();
+//        }
+//    }
+
+    public static int getMinZ() {
+        if (priorityQueue.size() != 0) {
+            return priorityQueue.peek().getZ();
+        }
+        return Server.LEAST_TO_CACHE;
+    }
 
     /**
      * search in cache, if it's found , increment z by one.
+     *
      * @param x value to search
      * @return if found return y value of x , else DatabaseManager.NOT_FOUND
      */
@@ -131,7 +204,7 @@ public class CacheManager {
             }
             XYZ ans = cache.get(x);
             if (ans == null) {
-                return DatabaseManager.NOT_FOUND; 
+                return DatabaseManager.NOT_FOUND;
             } else {
                 ans.incZ();
                 return ans.getY();

@@ -1,10 +1,7 @@
 package ServerPack;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.Semaphore;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  *
@@ -71,5 +68,7 @@ public class ReadWriteLock {
             ex.printStackTrace();
         }
     }
+
+
 
 }

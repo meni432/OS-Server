@@ -7,6 +7,7 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  *
  * @author Meni Samet
+ * @param <T>
  */
 public class SyncArrayList<T> {
 
