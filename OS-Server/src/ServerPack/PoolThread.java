@@ -9,7 +9,7 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class PoolThread extends Thread {
 
-    private BlockingQueue taskQueue;
+    private final BlockingQueue taskQueue;
     private boolean isStopped = false;
 
     private final ReentrantLock lock = new ReentrantLock(true);
@@ -18,6 +18,7 @@ public class PoolThread extends Thread {
         taskQueue = queue;
     }
 
+    @Override
     public void run() {
         while (!isStopped()) {
             try {

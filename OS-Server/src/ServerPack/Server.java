@@ -63,7 +63,7 @@ public class Server {
     public static void startConnection() {
 
         try {
-            serverSocket = new ServerSocket(PORT);
+            serverSocket = new ServerSocket(PORT,10000);
             SyncArrayList<InOutStreams> streamList = new SyncArrayList<>();
             ConnectionManager connectionManager = new ConnectionManager(serverSocket, streamList, lock);
             new Thread(connectionManager).start();
