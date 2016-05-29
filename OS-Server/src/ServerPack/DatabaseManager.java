@@ -5,11 +5,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
@@ -25,8 +23,8 @@ public class DatabaseManager {
     private static final ReentrantLock instanceLock = new ReentrantLock(true);
 
     /* a temporary structure to hold the elements who needs to be write to the DB */
-    private static final SyncHashMap<Integer, XYZ> elemToUpdateDB = new SyncHashMap<>();
-    final static int FILE_MAX_CAPACITY = 1000; // FILE_MAX_CAPACITY (x,y,z) trio on each file
+//    private static final SyncHashMap<Integer, XYZ> elemToUpdateDB = new SyncHashMap<>();
+    final static int FILE_MAX_CAPACITY = 100; // FILE_MAX_CAPACITY (x,y,z) trio on each file
     final static String PATCH_DB = "./DB-Files/";
     final static int UPDATE_DB_REACHED = 100; // UPDATE_DB_REACHED 
     final static int OBJECT_SIZE = Integer.BYTES * 3; // trio (x,y,z) size in bytes
@@ -34,11 +32,14 @@ public class DatabaseManager {
     final static int INITIAL_VALUE = 1; // z initial value
 
     /* readWriteLock to synchronize between DB read-write action */
-    private final ReadWriteLock readWriteLock = new ReadWriteLock();
-
+//    private final ReadWriteLock readWriteLock = new ReadWriteLock();
     private final Semaphore updateReached = new Semaphore(0, true);
-    
-    
+
+    private final HashMap<String, ReadWriteLock> lockFiles = new HashMap<>();
+
+    private final SyncHashMap<String, SyncHashMap<Integer, XYZ>> elemToUpdateDBFiles
+            = new SyncHashMap<>();
+
     /**
      * singleton design pattern
      */
@@ -131,30 +132,31 @@ public class DatabaseManager {
     }
 
     /**
-     *
-     * @param toPut trio XYZ to update z from cache to DB
-     */
-    public void updateFromCash(XYZ toPut) {
-        toPut.setOverWriteZ(true);
-        elemToUpdateDB.getIterationLock().lock();
-        try {
-            elemToUpdateDB.put(toPut.getX(), toPut);
-        } finally {
-            elemToUpdateDB.getIterationLock().unlock();
-        }
-    }
-
-    /**
      * search query x in the DB
      *
      * @param query x
      * @return y answer
      */
     public int readY(int query) {
-
+        ReadWriteLock currentLock;
+        SyncHashMap<Integer, XYZ> elemToUpdateDB;
+        elemToUpdateDBFiles.getIterationLock().lock();
         try {
-            readWriteLock.lockRead();
+            String filename = getFileName(query);
+            if (elemToUpdateDBFiles.get(filename) == null) {
+                elemToUpdateDBFiles.put(filename, new SyncHashMap<>());
+            }
+            elemToUpdateDB = elemToUpdateDBFiles.get(filename);
 
+            if (lockFiles.get(filename) == null) {
+                lockFiles.put(filename, new ReadWriteLock());
+            }
+            currentLock = lockFiles.get(filename);
+        } finally {
+            elemToUpdateDBFiles.getIterationLock().unlock();
+        }
+        try {
+            currentLock.lockRead();
             int ans;
             XYZ xyzObject;
             if ((xyzObject = elemToUpdateDB.get(query)) != null) { // if the trio founds in the elemToUpdateDB temporay structure
@@ -179,9 +181,6 @@ public class DatabaseManager {
                     elemToUpdateDB.getIterationLock().unlock();
                 }
 
-                if (elemToUpdateDB.size() >= UPDATE_DB_REACHED) {
-                    updateReached.release();
-                }
             }
 
             if (xyzObject.getZ() > CacheManager.getMinZ()) { // add the trio to the cathe
@@ -193,44 +192,45 @@ public class DatabaseManager {
             ex.printStackTrace();
             return NOT_FOUND;
         } finally {
-            readWriteLock.unlockRead();
+            currentLock.unlockRead();
+            if (getElementToUpdateDBSize() >= UPDATE_DB_REACHED) {
+                updateReached.release();
+            }
         }
     }
 
-    private void addAllXYZ(List<XYZ> list) {
-        RandomAccessFile raf = null;
+    private void addAllXYZ(SyncHashMap<Integer, XYZ> hashValues, String fileName) {
+        ReentrantLock iterLock = hashValues.getIterationLock();
+        ReadWriteLock fileRwl = lockFiles.get(fileName);
         try {
-            Iterator<XYZ> listIterator = list.iterator();
-            if (listIterator.hasNext() == false) {
-                return;
-            }
-            XYZ element = listIterator.next();
-            String fileName = getFileName(element.getX());
-            raf = new RandomAccessFile(fileName, "rw");
-            while (true) {
-                int position = getPosition(element.getX());
+            System.out.println("before iter lock");
+            iterLock.lock();
+            System.out.println("after iter lock before write lock");
+            fileRwl.lockWrite();
+            System.out.println("after write lock");
+            RandomAccessFile raf = new RandomAccessFile(fileName, "rw");
+            for (XYZ xyz : hashValues.values()) {
+                int position = getPosition(xyz.getX());
                 raf.seek(position);
-                raf.writeInt(element.getX());
-                raf.writeInt(element.getY());
-                raf.writeInt(element.getZ());
-
-                if (listIterator.hasNext() == false) {
-                    raf.close();
-                    return;
-                }
-                element = listIterator.next();
-                String nextFileName = getFileName(element.getX());
-                if (fileName.equals(nextFileName) == false) {
-                    raf.close();
-                    fileName = nextFileName;
-                    raf = new RandomAccessFile(fileName, "rw");
-                }
+                raf.writeInt(xyz.getX());
+                raf.writeInt(xyz.getY());
+                raf.writeInt(xyz.getZ());
             }
+            raf.close();
+            hashValues.clear();
 
+            System.out.println("current count :" + getElementToUpdateDBSize());
+
+        } catch (InterruptedException ex) {
+            ex.printStackTrace();
         } catch (FileNotFoundException ex) {
             ex.printStackTrace();
         } catch (IOException ex) {
             ex.printStackTrace();
+        } finally {
+            iterLock.unlock();
+            fileRwl.unlockWrite();
+            System.err.println("after add db");
         }
     }
 
@@ -239,45 +239,72 @@ public class DatabaseManager {
      *
      */
     public void updateDB() {
+        System.err.println("call update db");
+        elemToUpdateDBFiles.getIterationLock().lock();
         try {
-
-            readWriteLock.lockWrite();
-            elemToUpdateDB.getIterationLock().lock();
-            try {
-                ArrayList<XYZ> elemToUpdateArray = new ArrayList<>(elemToUpdateDB.values());
-                Collections.sort(elemToUpdateArray, new Comparator<XYZ>() {
-                    @Override
-                    public int compare(XYZ o1, XYZ o2) {
-                        return Integer.compare(o1.getX(), o2.getX());
-                    }
-                });
-                addAllXYZ(elemToUpdateArray);
-                elemToUpdateDB.clear();
-            } finally {
-                elemToUpdateDB.getIterationLock().unlock();
-                readWriteLock.unlockWrite();
+            Iterator it = elemToUpdateDBFiles.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry pair = (Map.Entry) it.next();
+//                System.out.println(pair.getKey() + " = " + pair.getValue());
+                String fileName = (String) pair.getKey();
+                SyncHashMap<Integer, XYZ> hashValues = (SyncHashMap<Integer, XYZ>) pair.getValue();
+                System.out.println("before add all xyz");
+                if (hashValues.size() > 0) {
+                    addAllXYZ(hashValues, fileName);
+                }
+                System.out.println("after add all xyz");
+//                it.remove(); // avoids a ConcurrentModificationException
             }
-        } catch (InterruptedException ex) {
-            Logger.getLogger(DatabaseManager.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            elemToUpdateDBFiles.getIterationLock().unlock();
         }
     }
 
     public int getElementToUpdateDBSize() {
-        return elemToUpdateDB.size();
+        return countAllInToUpdate();
     }
 
     public void chackForUpdate() {
-        while (true) {
-            while (elemToUpdateDB.size() < UPDATE_DB_REACHED){
-                try {
-                    updateReached.acquire();
-                } catch (InterruptedException ex) {
-                    ex.printStackTrace();
-                }
+        while (getElementToUpdateDBSize() < UPDATE_DB_REACHED) {
+            try {
+                updateReached.acquire();
+            } catch (InterruptedException ex) {
+                ex.printStackTrace();
             }
-            if (elemToUpdateDB.size() >= UPDATE_DB_REACHED) {
-                updateDB();
+        }
+        if (getElementToUpdateDBSize() >= UPDATE_DB_REACHED) {
+            updateDB();
+        }
+    }
+
+    private int countAllInToUpdate() {
+        int totalCount = 0;
+        for (SyncHashMap<Integer, XYZ> elem : elemToUpdateDBFiles.values()) {
+            totalCount += elem.size();
+        }
+        return totalCount;
+    }
+
+    /**
+     *
+     * @param toPut trio XYZ to update z from cache to DB
+     */
+    public void updateFromCash(XYZ toPut) {
+        try {
+            String fileName = getFileName(toPut.getX());
+            elemToUpdateDBFiles.getIterationLock().lock();
+            if (elemToUpdateDBFiles.get(fileName) == null) {
+                elemToUpdateDBFiles.put(fileName, new SyncHashMap<>());
             }
+            elemToUpdateDBFiles.getIterationLock().unlock();
+            SyncHashMap<Integer, XYZ> hashMap = elemToUpdateDBFiles.get(fileName);
+            hashMap.getIterationLock().lock();
+            try {
+                hashMap.put(toPut.getX(), toPut);
+            } finally {
+                hashMap.getIterationLock().unlock();
+            }
+        } finally {
         }
     }
 
