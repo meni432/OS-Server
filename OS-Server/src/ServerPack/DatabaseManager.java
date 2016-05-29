@@ -5,6 +5,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -39,6 +41,8 @@ public class DatabaseManager {
 
     private final SyncHashMap<String, SyncHashMap<Integer, XYZ>> elemToUpdateDBFiles
             = new SyncHashMap<>();
+
+    private final HashMap<Integer, XYZ> counterHash = new HashMap<>();
 
     /**
      * singleton design pattern
@@ -157,6 +161,7 @@ public class DatabaseManager {
             lockFiles.getIterationLock().lock();
             try {
                 lockFiles.put(filename, new ReadWriteLock());
+
             } finally {
                 lockFiles.getIterationLock().unlock();
             }
@@ -185,6 +190,7 @@ public class DatabaseManager {
                 elemToUpdateDB.getIterationLock().lock();
                 try {
                     elemToUpdateDB.put(query, xyzObject); // put toUpdate in the temporary structure
+                    counterHash.put(ans, xyzObject);
                 } finally {
                     elemToUpdateDB.getIterationLock().unlock();
                 }
@@ -217,15 +223,18 @@ public class DatabaseManager {
             fileRwl.lockWrite();
             raf = new RandomAccessFile(fileName, "rw");
             iterLock.lock();
+            ArrayList<XYZ> array = new ArrayList<>(hashValues.values());
+            array.removeAll(Collections.singleton(null)); // remove all null values from array
+            Collections.sort(array); // search by x
             for (XYZ xyz : hashValues.values()) {
                 int position = getPosition(xyz.getX());
                 raf.seek(position);
                 raf.writeInt(xyz.getX());
                 raf.writeInt(xyz.getY());
                 raf.writeInt(xyz.getZ());
+                counterHash.remove(xyz.getX());
             }
             hashValues.clear();
-
 
         } catch (InterruptedException ex) {
             ex.printStackTrace();
@@ -270,7 +279,7 @@ public class DatabaseManager {
     }
 
     public int getElementToUpdateDBSize() {
-        return countAllInToUpdate();
+        return counterHash.size();
     }
 
     public void chackForUpdate() {
@@ -284,14 +293,6 @@ public class DatabaseManager {
         if (getElementToUpdateDBSize() >= UPDATE_DB_REACHED) {
             updateDB();
         }
-    }
-
-    private int countAllInToUpdate() {
-        int totalCount = 0;
-        for (SyncHashMap<Integer, XYZ> elem : elemToUpdateDBFiles.values()) {
-            totalCount += elem.size();
-        }
-        return totalCount;
     }
 
     /**
