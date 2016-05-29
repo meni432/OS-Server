@@ -20,17 +20,18 @@ public class InOutStreams {
     private final Socket socket;
     private final PrintWriter out;
     private final BufferedReader in;
-    private static int ordinalNumber=1;
+    
+    private static int ordinalNumber = 1;
 
     public static final int NOT_AVIVABLE = -2;
 
     InOutStreams(Socket socket) throws IOException {
         this.socket = socket;
-//        socket.setSoTimeout(Server.TIME_TO_WAIT*2);
         out = new PrintWriter(socket.getOutputStream(), true);  //open a PrintWriter on the socket
         in = new BufferedReader(new InputStreamReader(
                 socket.getInputStream()));  //open a BufferedReader on the socket
-        out.println(ordinalNumber++);   // send the client is ordinalNumber .  
+        
+        out.println(ordinalNumber++);
     }
 
     public BufferedReader getOis() {

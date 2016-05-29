@@ -1,10 +1,7 @@
 package ServerPack;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.Semaphore;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  *
@@ -13,11 +10,11 @@ import java.util.logging.Logger;
 public class ReadWriteLock {
 
     private int readers = 0, wrieters = 0;
-    private Semaphore Rmutex = new Semaphore(1);
-    private Semaphore Wmutex = new Semaphore(1);
-    private Semaphore Mutex2 = new Semaphore(1);
-    private Semaphore Rdb = new Semaphore(1);
-    private Semaphore Wdb = new Semaphore(1);
+    private final Semaphore Rmutex = new Semaphore(1);
+    private final Semaphore Wmutex = new Semaphore(1);
+    private final Semaphore Mutex2 = new Semaphore(1);
+    private final Semaphore Rdb = new Semaphore(1);
+    private final Semaphore Wdb = new Semaphore(1);
 
     public void lockRead() throws InterruptedException {
         Mutex2.acquire();
@@ -29,6 +26,7 @@ public class ReadWriteLock {
         }
         Rmutex.release();
         Rdb.release();
+
         Mutex2.release();
         // Enter TO <C.S>
 
@@ -41,6 +39,7 @@ public class ReadWriteLock {
             if (readers == 0) {
                 Wdb.release();
             }
+
             Rmutex.release();
         } catch (InterruptedException ex) {
             ex.printStackTrace();
