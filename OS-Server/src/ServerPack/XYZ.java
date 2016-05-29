@@ -61,12 +61,47 @@ class XYZ {
             lock.unlockWrite();
         }
     }
-
+    
+    public void zeroZ(){
+        try {
+            lock.lockWrite();
+            this.z = 0;
+        } catch (InterruptedException ex) {
+            ex.printStackTrace();
+        } finally {
+            lock.unlockWrite();
+        }
+    }
     public void setOverWriteZ(boolean overWriteZ) {
         this.overWriteZ = overWriteZ;
     }
         public boolean isOverWriteZ() {
         return overWriteZ;
     }
+
+    @Override
+    public int hashCode() {
+        return new Integer(x).hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final XYZ other = (XYZ) obj;
+        if (this.x != other.x) {
+            return false;
+        }
+        return true;
+    }
+        
+        
 
 }

@@ -69,6 +69,22 @@ public class ReadWriteLock {
         }
     }
 
-
+    
+//    ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock(true);
+//
+//    public void lockRead() throws InterruptedException{
+//        readWriteLock.readLock().lock();
+//    }
+//    public void unlockRead() {
+//        readWriteLock.readLock().unlock();
+//    }
+//
+//    public void lockWrite() throws InterruptedException {
+//        readWriteLock.writeLock().lock();
+//    }
+//
+//    public void unlockWrite() {
+//        readWriteLock.writeLock().unlock();
+//    }
 
 }

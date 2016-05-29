@@ -8,6 +8,8 @@ package ServerPack;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -84,9 +86,11 @@ public final class Server {
         new Thread("DbWriterThread") {
             @Override
             public void run() {
+                DatabaseManager databaseManager = DatabaseManager.getInstance();
                 while (true) {
-                    DatabaseManager.getInstance().updateDB();
-                    System.out.println("------------update DB completed---------------");
+                    databaseManager.chackForUpdate();
+//                    System.out.println("------------update DB completed---------------");
+                    
                 }
             }
         }.start();
@@ -104,7 +108,7 @@ public final class Server {
     public void startConnection() {
 
         try {
-            serverSocket = new ServerSocket(PORT,100);
+            serverSocket = new ServerSocket(PORT,1000);
             SyncArrayList<InOutStreams> streamList = new SyncArrayList<>();
             ConnectionManager connectionManager = new ConnectionManager(serverSocket, streamList, lock);
             new Thread(connectionManager).start();
@@ -127,8 +131,8 @@ public final class Server {
         } else {
             S = 5;
             C = 100;
-            M = 100;
-            L = 100;
+            M = 25;
+            L = 1000;
             Y = 5;
         }
         
