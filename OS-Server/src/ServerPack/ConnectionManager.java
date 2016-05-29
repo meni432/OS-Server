@@ -3,12 +3,17 @@ package ServerPack;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.locks.ReentrantLock;
-
+<<<<<<< HEAD
+/**
+ * manage the client-server connection, 
+ * @author ofir Arnon
+=======
 
 /**
  * Connection Manager Class.
  * This is a Runnable class that alway listen for new client connection,
  * and after connection add him to ArryaList
+>>>>>>> refs/remotes/origin/up-change
  */
 public class ConnectionManager implements Runnable {
 

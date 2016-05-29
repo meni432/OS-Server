@@ -1,7 +1,16 @@
 package ServerPack;
 
 import java.io.IOException;
+import java.net.SocketTimeoutException;
+<<<<<<< HEAD
+=======
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Semaphore;
+>>>>>>> refs/remotes/origin/up-change
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * this class monitor the request that sending to the server (query request) and
@@ -15,6 +24,7 @@ public class RequestMonitor extends Thread {
     private final ThreadPool cashReadersPool;
     private final ReentrantLock lock;
     private boolean executeRead = false;
+    private ScheduleThread scheduleThread = new ScheduleThread();
     private ThreadPool readerThreadPool = new ThreadPool(1);
 
     public RequestMonitor(SyncArrayList<InOutStreams> streamList, ThreadPool seachersThreadPool, ThreadPool cashReadersPool, ThreadPool dBreadersPool, ReentrantLock lock) {
