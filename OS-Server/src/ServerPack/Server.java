@@ -8,8 +8,6 @@ package ServerPack;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -19,12 +17,13 @@ public final class Server {
 
     public static volatile Server _instance;
     private static final ReentrantLock instanceLock = new ReentrantLock(true);
-    private static final int PORT = 4500; // defult port
+    private static final int PORT = 5000; // defult port
 
     /* lock that synchronized between connectionManager and requestMonitor */
     private final ReentrantLock lock = new ReentrantLock(true);
     private ServerSocket serverSocket;
     public static final int TIME_TO_WAIT = 1000; // time to wait for read object until interrupt him
+    private final int MAX_TCP_CONNECTION = 5000;
 
     /*-------- defult parameters to start without command line ------------------------ */
     public static int S_THREADS_NUM; //1. S - number of allowed S-threads.
@@ -63,8 +62,6 @@ public final class Server {
                 + "NUMBER_OF_READER_THREADS: " + NUMBER_OF_READER_THREADS + "\n");
     }
 
-
-
     public static Server getInstance(int S, int C, int M, int L, int Y) {
         instanceLock.lock();
         try {
@@ -76,6 +73,7 @@ public final class Server {
             instanceLock.unlock();
         }
     }
+
     public void creatsThreadPools() {
         seachersPool = new ThreadPool(S_THREADS_NUM, "seachersPool");
         cashReadersPool = new ThreadPool(NUMBER_OF_READER_THREADS, "cashReadersPool");
@@ -89,8 +87,8 @@ public final class Server {
                 DatabaseManager databaseManager = DatabaseManager.getInstance();
                 while (true) {
                     databaseManager.chackForUpdate();
-//                    System.out.println("------------update DB completed---------------");
-                    
+                    System.out.println("------------update DB completed---------------");
+
                 }
             }
         }.start();
@@ -108,7 +106,7 @@ public final class Server {
     public void startConnection() {
 
         try {
-            serverSocket = new ServerSocket(PORT,1000);
+            serverSocket = new ServerSocket(PORT, MAX_TCP_CONNECTION);
             SyncArrayList<InOutStreams> streamList = new SyncArrayList<>();
             ConnectionManager connectionManager = new ConnectionManager(serverSocket, streamList, lock);
             new Thread(connectionManager).start();
@@ -135,7 +133,7 @@ public final class Server {
             L = 1000;
             Y = 5;
         }
-        
+
         // call to Server Instance
         Server server = Server.getInstance(S, C, M, L, Y);
     }

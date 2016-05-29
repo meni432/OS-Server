@@ -21,10 +21,10 @@ import java.util.logging.Logger;
  */
 public class SyncHashMap<K, V> {
 
-    private ReentrantLock lock = new ReentrantLock(true);
-    private HashMap<K, V> hashMap = new HashMap<>();
-    private ReadWriteLock readWriteLock = new ReadWriteLock();
-    private ReentrantLock iterationLock = new ReentrantLock(true);
+    private final HashMap<K, V> hashMap = new HashMap<>();
+    private final ReadWriteLock readWriteLock = new ReadWriteLock();
+    private final ReentrantLock iterationLock = new ReentrantLock(true);
+
 
     public V put(K key, V value) {
         try {
@@ -50,7 +50,7 @@ public class SyncHashMap<K, V> {
         }
     }
 
-    public V get(Object key) {
+    public V get(K key) {
 
         try {
             readWriteLock.lockRead();
@@ -112,6 +112,7 @@ public class SyncHashMap<K, V> {
         }
         return null;
     }
+    
 
     public ReentrantLock getIterationLock() {
         return iterationLock;

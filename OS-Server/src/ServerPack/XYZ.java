@@ -3,10 +3,10 @@ package ServerPack;
 /**
  * XYZ Class, z value synchronize with read write lock
  */
-class XYZ {
+class XYZ implements Comparable<XYZ>{
 
     public static final int LockError = -1;
-    private ReadWriteLock lock = new ReadWriteLock();
+    private final ReadWriteLock lock = new ReadWriteLock();
     private boolean overWriteZ;
 
     private int x;
@@ -100,6 +100,11 @@ class XYZ {
             return false;
         }
         return true;
+    }
+
+    @Override
+    public int compareTo(XYZ o) {
+        return Integer.compare(this.getX(), o.getX());
     }
         
         

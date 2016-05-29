@@ -35,7 +35,7 @@ public class DatabaseManager {
 //    private final ReadWriteLock readWriteLock = new ReadWriteLock();
     private final Semaphore updateReached = new Semaphore(0, true);
 
-    private final HashMap<String, ReadWriteLock> lockFiles = new HashMap<>();
+    private final SyncHashMap<String, ReadWriteLock> lockFiles = new SyncHashMap<>();
 
     private final SyncHashMap<String, SyncHashMap<Integer, XYZ>> elemToUpdateDBFiles
             = new SyncHashMap<>();
@@ -140,21 +140,29 @@ public class DatabaseManager {
     public int readY(int query) {
         ReadWriteLock currentLock;
         SyncHashMap<Integer, XYZ> elemToUpdateDB;
-        elemToUpdateDBFiles.getIterationLock().lock();
-        try {
-            String filename = getFileName(query);
-            if (elemToUpdateDBFiles.get(filename) == null) {
-                elemToUpdateDBFiles.put(filename, new SyncHashMap<>());
-            }
-            elemToUpdateDB = elemToUpdateDBFiles.get(filename);
+        String filename;
 
-            if (lockFiles.get(filename) == null) {
-                lockFiles.put(filename, new ReadWriteLock());
+        filename = getFileName(query);
+        if (elemToUpdateDBFiles.get(filename) == null) {
+            elemToUpdateDBFiles.getIterationLock().lock();
+            try {
+                elemToUpdateDBFiles.put(filename, new SyncHashMap<>());
+            } finally {
+                elemToUpdateDBFiles.getIterationLock().unlock();
             }
-            currentLock = lockFiles.get(filename);
-        } finally {
-            elemToUpdateDBFiles.getIterationLock().unlock();
         }
+        elemToUpdateDB = elemToUpdateDBFiles.get(filename);
+
+        if (lockFiles.get(filename) == null) {
+            lockFiles.getIterationLock().lock();
+            try {
+                lockFiles.put(filename, new ReadWriteLock());
+            } finally {
+                lockFiles.getIterationLock().unlock();
+            }
+        }
+        currentLock = lockFiles.get(filename);
+
         try {
             currentLock.lockRead();
             int ans;
@@ -186,6 +194,11 @@ public class DatabaseManager {
             if (xyzObject.getZ() > CacheManager.getMinZ()) { // add the trio to the cathe
                 CacheManager.addXYZtoCash(xyzObject);
             }
+
+            if (getElementToUpdateDBSize() >= UPDATE_DB_REACHED) {
+                updateReached.release();
+            }
+
             return ans;
 
         } catch (InterruptedException ex) {
@@ -193,22 +206,17 @@ public class DatabaseManager {
             return NOT_FOUND;
         } finally {
             currentLock.unlockRead();
-            if (getElementToUpdateDBSize() >= UPDATE_DB_REACHED) {
-                updateReached.release();
-            }
         }
     }
 
     private void addAllXYZ(SyncHashMap<Integer, XYZ> hashValues, String fileName) {
+        RandomAccessFile raf = null;
         ReentrantLock iterLock = hashValues.getIterationLock();
         ReadWriteLock fileRwl = lockFiles.get(fileName);
         try {
-            System.out.println("before iter lock");
-            iterLock.lock();
-            System.out.println("after iter lock before write lock");
             fileRwl.lockWrite();
-            System.out.println("after write lock");
-            RandomAccessFile raf = new RandomAccessFile(fileName, "rw");
+            raf = new RandomAccessFile(fileName, "rw");
+            iterLock.lock();
             for (XYZ xyz : hashValues.values()) {
                 int position = getPosition(xyz.getX());
                 raf.seek(position);
@@ -216,10 +224,8 @@ public class DatabaseManager {
                 raf.writeInt(xyz.getY());
                 raf.writeInt(xyz.getZ());
             }
-            raf.close();
             hashValues.clear();
 
-            System.out.println("current count :" + getElementToUpdateDBSize());
 
         } catch (InterruptedException ex) {
             ex.printStackTrace();
@@ -228,9 +234,15 @@ public class DatabaseManager {
         } catch (IOException ex) {
             ex.printStackTrace();
         } finally {
+            if (raf != null) {
+                try {
+                    raf.close();
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+            }
             iterLock.unlock();
             fileRwl.unlockWrite();
-            System.err.println("after add db");
         }
     }
 
@@ -239,7 +251,6 @@ public class DatabaseManager {
      *
      */
     public void updateDB() {
-        System.err.println("call update db");
         elemToUpdateDBFiles.getIterationLock().lock();
         try {
             Iterator it = elemToUpdateDBFiles.entrySet().iterator();
@@ -248,11 +259,9 @@ public class DatabaseManager {
 //                System.out.println(pair.getKey() + " = " + pair.getValue());
                 String fileName = (String) pair.getKey();
                 SyncHashMap<Integer, XYZ> hashValues = (SyncHashMap<Integer, XYZ>) pair.getValue();
-                System.out.println("before add all xyz");
                 if (hashValues.size() > 0) {
                     addAllXYZ(hashValues, fileName);
                 }
-                System.out.println("after add all xyz");
 //                it.remove(); // avoids a ConcurrentModificationException
             }
         } finally {
@@ -292,11 +301,16 @@ public class DatabaseManager {
     public void updateFromCash(XYZ toPut) {
         try {
             String fileName = getFileName(toPut.getX());
-            elemToUpdateDBFiles.getIterationLock().lock();
+
             if (elemToUpdateDBFiles.get(fileName) == null) {
-                elemToUpdateDBFiles.put(fileName, new SyncHashMap<>());
+                elemToUpdateDBFiles.getIterationLock().lock();
+                try {
+                    elemToUpdateDBFiles.put(fileName, new SyncHashMap<>());
+                } finally {
+                    elemToUpdateDBFiles.getIterationLock().unlock();
+                }
             }
-            elemToUpdateDBFiles.getIterationLock().unlock();
+
             SyncHashMap<Integer, XYZ> hashMap = elemToUpdateDBFiles.get(fileName);
             hashMap.getIterationLock().lock();
             try {
