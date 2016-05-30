@@ -16,7 +16,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- *
  * Management the writing and reading from file
  */
 public class DatabaseManager {
@@ -24,24 +23,23 @@ public class DatabaseManager {
     public static DatabaseManager _instance;
     private static final ReentrantLock instanceLock = new ReentrantLock(true);
 
-    /* a temporary structure to hold the elements who needs to be write to the DB */
-//    private static final SyncHashMap<Integer, XYZ> elemToUpdateDB = new SyncHashMap<>();
     final static int FILE_MAX_CAPACITY = 100; // FILE_MAX_CAPACITY (x,y,z) trio on each file
     final static String PATCH_DB = "./DB-Files/";
-    final static int UPDATE_DB_REACHED = 100; // UPDATE_DB_REACHED 
+    final static int UPDATE_DB_REACHED = 300; // UPDATE_DB_REACHED 
     final static int OBJECT_SIZE = Integer.BYTES * 3; // trio (x,y,z) size in bytes
     final static int NOT_FOUND = -1; // indicate that the trio not found
     final static int INITIAL_VALUE = 1; // z initial value
 
-    /* readWriteLock to synchronize between DB read-write action */
-//    private final ReadWriteLock readWriteLock = new ReadWriteLock();
     private final Semaphore updateReached = new Semaphore(0, true);
 
-    private final SyncHashMap<String, ReadWriteLock> lockFiles = new SyncHashMap<>();
+    /* individual lock file */
+    private final SyncHashMap<String, ReadWriteLock> lockByFileName = new SyncHashMap<>(); //<File Name, lock> HashMap
 
+    /* a temporary structure to hold the elements who needs to be write to the DB */
     private final SyncHashMap<String, SyncHashMap<Integer, XYZ>> elemToUpdateDBFiles
             = new SyncHashMap<>();
 
+    /* all element in elemToUpdateDBFiles, for counting number of element in all Hash */
     private final HashMap<Integer, XYZ> counterHash = new HashMap<>();
 
     /**
@@ -55,6 +53,9 @@ public class DatabaseManager {
         }
     }
 
+    /**
+     * @return DatabaseManager Single Object
+     */
     public static DatabaseManager getInstance() {
         instanceLock.lock();
         try {
@@ -109,7 +110,7 @@ public class DatabaseManager {
             int read = raf.readInt();
             if (read == 0) {
                 if (x == 0) {
-                    raf.seek(position + Integer.BYTES); //TODO i this this is a bug!!
+                    raf.seek(position + Integer.BYTES);
                     return new XYZ(x, raf.readInt(), raf.readInt());
                 } else {
                     return new XYZ(x, NOT_FOUND, 0);
@@ -147,26 +148,17 @@ public class DatabaseManager {
         String filename;
 
         filename = getFileName(query);
+        // Hash Map for file
         if (elemToUpdateDBFiles.get(filename) == null) {
-            elemToUpdateDBFiles.getIterationLock().lock();
-            try {
-                elemToUpdateDBFiles.put(filename, new SyncHashMap<>());
-            } finally {
-                elemToUpdateDBFiles.getIterationLock().unlock();
-            }
+            elemToUpdateDBFiles.put(filename, new SyncHashMap<>(), true); // with iteration lock
         }
         elemToUpdateDB = elemToUpdateDBFiles.get(filename);
 
-        if (lockFiles.get(filename) == null) {
-            lockFiles.getIterationLock().lock();
-            try {
-                lockFiles.put(filename, new ReadWriteLock());
-
-            } finally {
-                lockFiles.getIterationLock().unlock();
-            }
+        // File Lock
+        if (lockByFileName.get(filename) == null) {
+            lockByFileName.put(filename, new ReadWriteLock(), true); // with iteration lock
         }
-        currentLock = lockFiles.get(filename);
+        currentLock = lockByFileName.get(filename);
 
         try {
             currentLock.lockRead();
@@ -178,7 +170,6 @@ public class DatabaseManager {
             } else { // search in the DB files
                 xyzObject = readDBHelper(query);
                 ans = xyzObject.getY();
-
                 if (ans != NOT_FOUND) { // if the trio in the DB
                     xyzObject.setY(ans);
                 } else { // create random y for query x
@@ -190,7 +181,7 @@ public class DatabaseManager {
                 elemToUpdateDB.getIterationLock().lock();
                 try {
                     elemToUpdateDB.put(query, xyzObject); // put toUpdate in the temporary structure
-                    counterHash.put(ans, xyzObject);
+                    counterHash.put(xyzObject.getX(), xyzObject);
                 } finally {
                     elemToUpdateDB.getIterationLock().unlock();
                 }
@@ -218,14 +209,14 @@ public class DatabaseManager {
     private void addAllXYZ(SyncHashMap<Integer, XYZ> hashValues, String fileName) {
         RandomAccessFile raf = null;
         ReentrantLock iterLock = hashValues.getIterationLock();
-        ReadWriteLock fileRwl = lockFiles.get(fileName);
+        ReadWriteLock fileRwl = lockByFileName.get(fileName);
         try {
             fileRwl.lockWrite();
             raf = new RandomAccessFile(fileName, "rw");
             iterLock.lock();
             ArrayList<XYZ> array = new ArrayList<>(hashValues.values());
             array.removeAll(Collections.singleton(null)); // remove all null values from array
-            Collections.sort(array); // search by x
+            Collections.sort(array); // sort by x
             for (XYZ xyz : hashValues.values()) {
                 int position = getPosition(xyz.getX());
                 raf.seek(position);
@@ -265,23 +256,27 @@ public class DatabaseManager {
             Iterator it = elemToUpdateDBFiles.entrySet().iterator();
             while (it.hasNext()) {
                 Map.Entry pair = (Map.Entry) it.next();
-//                System.out.println(pair.getKey() + " = " + pair.getValue());
                 String fileName = (String) pair.getKey();
                 SyncHashMap<Integer, XYZ> hashValues = (SyncHashMap<Integer, XYZ>) pair.getValue();
-                if (hashValues.size() > 0) {
+                if (hashValues.size() > 0) { // check if there is values to write in this file
                     addAllXYZ(hashValues, fileName);
                 }
-//                it.remove(); // avoids a ConcurrentModificationException
             }
         } finally {
             elemToUpdateDBFiles.getIterationLock().unlock();
         }
     }
 
+    /**
+     * @return element in elemToUpdateDBFiles HashMap (wait for writing)
+     */
     public int getElementToUpdateDBSize() {
         return counterHash.size();
     }
 
+    /**
+     * check if this is the time to update the database
+     */
     public void chackForUpdate() {
         while (getElementToUpdateDBSize() < UPDATE_DB_REACHED) {
             try {
@@ -296,7 +291,6 @@ public class DatabaseManager {
     }
 
     /**
-     *
      * @param toPut trio XYZ to update z from cache to DB
      */
     public void updateFromCash(XYZ toPut) {
